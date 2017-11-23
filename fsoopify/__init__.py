@@ -116,12 +116,13 @@ class FileInfo(NodeInfo):
     def is_exists(self):
         return os.path.isfile(self._path)
 
-    def copy_to(self, dest_path: str):
+    def copy_to(self, dest_path: str, buffering: int=-1):
         ''' copy the file to dest path. '''
-        with open(self._path, 'rb') as fp1:
+        with open(self._path, 'rb', buffering=buffering) as source:
             # use x mode to ensure dest does not exists.
-            with open(dest_path, 'xb') as fp2:
-                fp2.write(fp1.read())
+            with open(dest_path, 'xb') as dest:
+                for buffer in source:
+                    dest.write(buffer)
 
     def is_file(self):
         ''' check if this is a exists file. '''
