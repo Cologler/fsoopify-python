@@ -16,6 +16,9 @@ class Path(str):
         self._dirname, self._name = os.path.split(self._path)
         self._pure_name, self._ext = os.path.splitext(self._name)
 
+    def __repr__(self):
+        return '{}(\'{}\')'.format(type(self).__name__, self._path)
+
     @property
     def dirname(self):
         ''' get directory path from path. '''
@@ -28,10 +31,12 @@ class Path(str):
 
     @property
     def pure_name(self):
+        ''' get name without ext from path. '''
         return self._pure_name
 
     @property
     def ext(self):
+        ''' get ext from path. '''
         return self._ext
 
     def is_ext_equals(self, val):
@@ -68,7 +73,7 @@ class NodeInfo:
         return str(self._path)
 
     def __repr__(self):
-        return '{}({})'.format(type(self).__name__, self._path)
+        return '{}(\'{}\')'.format(type(self).__name__, self._path)
 
     @property
     def path(self):
