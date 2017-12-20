@@ -76,7 +76,7 @@ class NodeInfo:
         return '{}(\'{}\')'.format(type(self).__name__, self._path)
 
     @property
-    def path(self):
+    def path(self) -> Path:
         ''' return a Path object. '''
         return self._path
 
@@ -124,9 +124,19 @@ class FileInfo(NodeInfo):
                 for buffer in source:
                     dest.write(buffer)
 
-    def is_file(self):
+    def is_file(self) -> bool:
         ''' check if this is a exists file. '''
         return self.is_exists()
+
+    def read_alltext(self, encoding=None) -> str:
+        ''' read all text into memory. '''
+        with open(self._path, 'r', encoding=encoding) as fp:
+            return fp.read()
+
+    def read_allbytes(self) -> bytes:
+        ''' read all bytes into memory. '''
+        with open(self._path, 'rb') as fp:
+            return fp.read()
 
 
 class DirectoryInfo(NodeInfo):
