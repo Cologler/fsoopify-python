@@ -150,13 +150,13 @@ class DirectoryInfo(NodeInfo):
         ''' check if this is a exists directory. '''
         return self.is_exists()
 
-    def list_items(self, deep: int=1):
+    def list_items(self, depth: int=1):
         ''' get items from directory. '''
-        if deep != None and not isinstance(deep, int):
+        if depth is not None and not isinstance(depth, int):
             raise TypeError
         items = []
         def itor(root, d):
-            if d != None:
+            if d is not None:
                 d -= 1
                 if d < 0:
                     return
@@ -166,5 +166,5 @@ class DirectoryInfo(NodeInfo):
                 items.append(node)
                 if isinstance(node, DirectoryInfo):
                     itor(path, d)
-        itor(self._path, deep)
+        itor(self._path, depth)
         return items
