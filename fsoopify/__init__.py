@@ -116,6 +116,15 @@ class FileInfo(NodeInfo):
     def is_exists(self):
         return os.path.isfile(self._path)
 
+    def open(self, mode='r', buffering=-1, encoding=None, newline=None, closefd=True):
+        ''' open the file. '''
+        return open(self._path,
+                    mode=mode,
+                    buffering=buffering,
+                    encoding=encoding,
+                    newline=newline,
+                    closefd=closefd)
+
     def copy_to(self, dest_path: str, buffering: int=-1):
         ''' copy the file to dest path. '''
         with open(self._path, 'rb', buffering=buffering) as source:
