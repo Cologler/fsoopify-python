@@ -137,7 +137,7 @@ class FileInfo(NodeInfo):
         ''' check if this is a exists file. '''
         return self.is_exists()
 
-    def read_alltext(self, encoding=None) -> str:
+    def read_alltext(self, encoding='utf8') -> str:
         ''' read all text into memory. '''
         with open(self._path, 'r', encoding=encoding) as fp:
             return fp.read()
@@ -146,6 +146,16 @@ class FileInfo(NodeInfo):
         ''' read all bytes into memory. '''
         with open(self._path, 'rb') as fp:
             return fp.read()
+
+    def write_alltext(self, text: str, encoding='utf8'):
+        ''' write all text into file. '''
+        with open(self._path, 'w', encoding=encoding) as fp:
+            fp.write(text)
+
+    def write_allbytes(self, data: bytes):
+        ''' write all text into file. '''
+        with open(self._path, 'wb') as fp:
+            fp.write(data)
 
 
 class DirectoryInfo(NodeInfo):
