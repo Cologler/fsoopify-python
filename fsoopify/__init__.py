@@ -116,6 +116,10 @@ class FileInfo(NodeInfo):
     def is_exists(self):
         return os.path.isfile(self._path)
 
+    def is_file(self) -> bool:
+        ''' check if this is a exists file. '''
+        return self.is_exists()
+
     def open(self, mode='r', buffering=-1, encoding=None, newline=None, closefd=True):
         ''' open the file. '''
         return open(self._path,
@@ -133,29 +137,35 @@ class FileInfo(NodeInfo):
                 for buffer in source:
                     dest.write(buffer)
 
-    def is_file(self) -> bool:
-        ''' check if this is a exists file. '''
-        return self.is_exists()
-
     def read_alltext(self, encoding='utf8') -> str:
         ''' read all text into memory. '''
-        with open(self._path, 'r', encoding=encoding) as fp:
+        with self.open('r', encoding=encoding) as fp:
             return fp.read()
 
     def read_allbytes(self) -> bytes:
         ''' read all bytes into memory. '''
-        with open(self._path, 'rb') as fp:
+        with self.open('rb') as fp:
             return fp.read()
 
     def write_alltext(self, text: str, encoding='utf8'):
         ''' write all text into file. '''
-        with open(self._path, 'w', encoding=encoding) as fp:
-            fp.write(text)
+        with self.open('w', encoding=encoding) as fp:
+            return fp.write(text)
 
     def write_allbytes(self, data: bytes):
-        ''' write all text into file. '''
-        with open(self._path, 'wb') as fp:
-            fp.write(data)
+        ''' write all bytes into file. '''
+        with self.open('wb') as fp:
+            return fp.write(data)
+
+    def append_text(self, text: str, encoding='utf8'):
+        ''' append text into file. '''
+        with self.open('a', encoding=encoding) as fp:
+            return fp.write(text)
+
+    def append_bytes(self, data: bytes):
+        ''' append bytes into file. '''
+        with self.open('ab') as fp:
+            return fp.write(data)
 
 
 class DirectoryInfo(NodeInfo):
