@@ -81,7 +81,7 @@ class NodeInfo:
         return self._path
 
     def is_exists(self):
-        raise NotImplementedError
+        return os.path.exists(self._path)
 
     def is_directory(self):
         ''' check if this is a exists directory. '''
@@ -113,12 +113,12 @@ class FileInfo(NodeInfo):
     def __init__(self, path):
         super().__init__(path)
 
-    def is_exists(self):
-        return os.path.isfile(self._path)
+    def is_exists(self) -> bool:
+        return self.is_file()
 
     def is_file(self) -> bool:
         ''' check if this is a exists file. '''
-        return self.is_exists()
+        return os.path.isfile(self._path)
 
     def open(self, mode='r', buffering=-1, encoding=None, newline=None, closefd=True):
         ''' open the file. '''
@@ -172,12 +172,12 @@ class DirectoryInfo(NodeInfo):
     def __init__(self, path):
         super().__init__(path)
 
-    def is_exists(self):
-        return os.path.isdir(self._path)
+    def is_exists(self) -> bool:
+        return self.is_directory()
 
-    def is_directory(self):
+    def is_directory(self) -> bool:
         ''' check if this is a exists directory. '''
-        return self.is_exists()
+        return os.path.isdir(self._path)
 
     def list_items(self, depth: int=1):
         ''' get items from directory. '''
@@ -211,7 +211,7 @@ class DirectoryInfo(NodeInfo):
                 yield '{} ({})'.format(name, index)
         for n in enumerate_name():
             path = os.path.join(self._path, n)
-            if os.path.isfile(path) or os.path.isdir(path):
+            if os.path.exists(path):
                 if not generate_unique_name:
                     raise FileExistsError
             return FileInfo(path)
