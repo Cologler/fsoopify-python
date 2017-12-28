@@ -7,6 +7,7 @@
 # ----------
 
 import os
+import typing
 
 class Path(str):
     def __init__(self, val):
@@ -147,23 +148,23 @@ class FileInfo(NodeInfo):
         with self.open('rb') as fp:
             return fp.read()
 
-    def write_alltext(self, text: str, encoding='utf8'):
-        ''' write all text into file. '''
+    def set_text(self, text: str, encoding='utf8'):
+        ''' write text into the new file or overwrite exists. '''
         with self.open('w', encoding=encoding) as fp:
             return fp.write(text)
 
-    def write_allbytes(self, data: bytes):
-        ''' write all bytes into file. '''
+    def set_bytes(self, data: bytes):
+        ''' write bytes into the new file or overwrite exists. '''
         with self.open('wb') as fp:
             return fp.write(data)
 
     def append_text(self, text: str, encoding='utf8'):
-        ''' append text into file. '''
+        ''' append text into the file. '''
         with self.open('a', encoding=encoding) as fp:
             return fp.write(text)
 
     def append_bytes(self, data: bytes):
-        ''' append bytes into file. '''
+        ''' append bytes into the file. '''
         with self.open('ab') as fp:
             return fp.write(data)
 
@@ -198,7 +199,7 @@ class DirectoryInfo(NodeInfo):
         itor(self._path, depth)
         return items
 
-    def create_fileinfo(self, name: str, generate_unique_name: False):
+    def create_fileinfo(self, name: str, generate_unique_name: bool=False):
         '''
         create a `FileInfo` for a file.
         this op does mean the file is created on disk.
