@@ -168,6 +168,10 @@ class FileInfo(NodeInfo):
         with self.open('ab') as fp:
             return fp.write(data)
 
+    def delete(self):
+        ''' remove the file from disk. '''
+        os.remove(self._path)
+
 
 class DirectoryInfo(NodeInfo):
     def __init__(self, path):
@@ -216,3 +220,7 @@ class DirectoryInfo(NodeInfo):
                 if not generate_unique_name:
                     raise FileExistsError
             return FileInfo(path)
+
+    def delete(self):
+        ''' remove the directory from disk. '''
+        os.rmdir(self._path)
