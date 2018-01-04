@@ -1,0 +1,1 @@
+pip install fsoopify --upgrade
