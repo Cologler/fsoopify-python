@@ -74,6 +74,28 @@ class FileInfo(NodeInfo):
                     newline=newline,
                     closefd=closefd)
 
+    def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None):
+        ''' write data into the file. '''
+        if mode is None:
+            mode = 'w' if isinstance(data, str) else 'wb'
+        with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
+            return fp.write(data)
+
+    def read(self, mode='r', *, buffering=-1, encoding=None, newline=None):
+        ''' read data from the file. '''
+        with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
+            return fp.read()
+
+    def write_text(self, text: str, encoding='utf-8', append=True):
+        ''' write text into the file. '''
+        mode = 'a' if append else 'w'
+        return self.write(text, mode=mode, encoding=encoding)
+
+    def write_bytes(self, data: bytes, append=True):
+        ''' write bytes into the file. '''
+        mode = 'ab' if append else 'wb'
+        return self.write(data, mode=mode)
+
     def copy_to(self, dest_path: str, buffering: int=-1):
         ''' copy the file to dest path. '''
         with open(self._path, 'rb', buffering=buffering) as source:
@@ -82,35 +104,15 @@ class FileInfo(NodeInfo):
                 for buffer in source:
                     dest.write(buffer)
 
-    def read_alltext(self, encoding='utf8') -> str:
+    def read_text(self, encoding='utf-8') -> str:
         ''' read all text into memory. '''
         with self.open('r', encoding=encoding) as fp:
             return fp.read()
 
-    def read_allbytes(self) -> bytes:
+    def read_bytes(self) -> bytes:
         ''' read all bytes into memory. '''
         with self.open('rb') as fp:
             return fp.read()
-
-    def set_text(self, text: str, encoding='utf8'):
-        ''' write text into the new file or overwrite exists. '''
-        with self.open('w', encoding=encoding) as fp:
-            return fp.write(text)
-
-    def set_bytes(self, data: bytes):
-        ''' write bytes into the new file or overwrite exists. '''
-        with self.open('wb') as fp:
-            return fp.write(data)
-
-    def append_text(self, text: str, encoding='utf8'):
-        ''' append text into the file. '''
-        with self.open('a', encoding=encoding) as fp:
-            return fp.write(text)
-
-    def append_bytes(self, data: bytes):
-        ''' append bytes into the file. '''
-        with self.open('ab') as fp:
-            return fp.write(data)
 
     def delete(self):
         ''' remove the file from disk. '''
