@@ -158,9 +158,16 @@ class DirectoryInfo(NodeInfo):
         itor(self._path, depth)
         return items
 
+    def get_fileinfo(self, name: str):
+        '''
+        get a `FileInfo` for a file.
+        '''
+        return FileInfo(os.path.join(self._path, name))
+
     def create_fileinfo(self, name: str, generate_unique_name: bool=False):
         '''
-        create a `FileInfo` for a file.
+        create a `FileInfo` for a new file.
+        if the file was exists, and `generate_unique_name` if `False`, raise `FileExistsError`.
         this op does mean the file is created on disk.
         '''
         def enumerate_name():
