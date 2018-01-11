@@ -28,10 +28,6 @@ class PathPart(str):
         return self._normcased == os.path.normcase(other)
 
 
-class DirectoryPart(PathPart):
-    pass
-
-
 class NamePart(PathPart):
     def __init__(self, val):
         super().__init__(val)
@@ -76,11 +72,11 @@ class Path(PathPart):
     def __ensure_dirname(self):
         if self._dirname is None:
             dn, fn = os.path.split(self)
-            self._dirname = DirectoryPart(dn)
+            self._dirname = Path(dn)
             self._name = NamePart(fn)
 
     @property
-    def dirname(self) -> DirectoryPart:
+    def dirname(self):
         ''' get directory path from path. '''
         self.__ensure_dirname()
         return self._dirname
