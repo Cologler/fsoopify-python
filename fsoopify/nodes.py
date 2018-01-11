@@ -130,6 +130,15 @@ class DirectoryInfo(NodeInfo):
         ''' check if this is a exists directory. '''
         return os.path.isdir(self._path)
 
+    def create(self):
+        ''' create directory. '''
+        os.mkdir(self.path)
+
+    def ensure_created(self):
+        ''' ensure the directory was created. '''
+        if not self.is_directory():
+            self.create()
+
     def list_items(self, depth: int=1):
         ''' get items from directory. '''
         if depth is not None and not isinstance(depth, int):
