@@ -11,6 +11,8 @@ from abc import abstractmethod
 from .paths import Path
 
 class NodeInfo:
+    ''' the abstract base class for file system node. '''
+
     def __init__(self, path):
         self._path: Path = Path(path)
 
@@ -24,17 +26,6 @@ class NodeInfo:
     def path(self) -> Path:
         ''' return a Path object. '''
         return self._path
-
-    def is_exists(self):
-        return os.path.exists(self._path)
-
-    def is_directory(self):
-        ''' check if this is a exists directory. '''
-        return False
-
-    def is_file(self):
-        ''' check if this is a exists file. '''
-        return False
 
     def rename(self, dest_path: str):
         ''' use `os.rename()` to move the node. '''
@@ -54,6 +45,27 @@ class NodeInfo:
 
         return None
 
+    # common methods
+
+    def is_exists(self):
+        ''' check whether the node is exists on disk. '''
+        return os.path.exists(self._path)
+
+    def is_directory(self):
+        ''' check whether the node is a exists directory. '''
+        return False
+
+    def is_file(self):
+        ''' check whether the node is a exists file. '''
+        return False
+
+    # abstract methods
+
+    @abstractmethod
+    def delete(self):
+        ''' remove the node from disk. '''
+        pass
+
     @abstractmethod
     def create_hardlink(self, dest_path: str):
         ''' create hardlink for the node. '''
@@ -62,14 +74,7 @@ class NodeInfo:
 
 class FileInfo(NodeInfo):
 
-    def is_exists(self) -> bool:
-        return self.is_file()
-
-    def is_file(self) -> bool:
-        ''' check if this is a exists file. '''
-        return os.path.isfile(self._path)
-
-    def open(self, mode='r', buffering=-1, encoding=None, newline=None, closefd=True):
+    def open(self, mode='r', *, buffering=-1, encoding=None, newline=None, closefd=True):
         ''' open the file. '''
         return open(self._path,
                     mode=mode,
@@ -105,7 +110,7 @@ class FileInfo(NodeInfo):
         mode = 'ab' if append else 'wb'
         return self.write(data, mode=mode)
 
-    def copy_to(self, dest_path: str, buffering: int=-1):
+    def copy_to(self, dest_path: str, buffering: int = -1):
         ''' copy the file to dest path. '''
         with open(self._path, 'rb', buffering=buffering) as source:
             # use x mode to ensure dest does not exists.
@@ -123,6 +128,17 @@ class FileInfo(NodeInfo):
         with self.open('rb') as fp:
             return fp.read()
 
+    # override common methods
+
+    def is_exists(self) -> bool:
+        return self.is_file()
+
+    def is_file(self) -> bool:
+        ''' check if this is a exists file. '''
+        return os.path.isfile(self._path)
+
+    # override @abstractmethod
+
     def delete(self):
         ''' remove the file from disk. '''
         os.remove(self._path)
@@ -134,13 +150,6 @@ class FileInfo(NodeInfo):
 
 class DirectoryInfo(NodeInfo):
 
-    def is_exists(self) -> bool:
-        return self.is_directory()
-
-    def is_directory(self) -> bool:
-        ''' check if this is a exists directory. '''
-        return os.path.isdir(self._path)
-
     def create(self):
         ''' create directory. '''
         os.mkdir(self.path)
@@ -150,7 +159,7 @@ class DirectoryInfo(NodeInfo):
         if not self.is_directory():
             self.create()
 
-    def list_items(self, depth: int=1):
+    def list_items(self, depth: int = 1):
         ''' get items from directory. '''
         if depth is not None and not isinstance(depth, int):
             raise TypeError
@@ -175,7 +184,7 @@ class DirectoryInfo(NodeInfo):
         '''
         return FileInfo(os.path.join(self._path, name))
 
-    def create_fileinfo(self, name: str, generate_unique_name: bool=False):
+    def create_fileinfo(self, name: str, generate_unique_name: bool = False):
         '''
         create a `FileInfo` for a new file.
         if the file was exists, and `generate_unique_name` if `False`, raise `FileExistsError`.
@@ -193,6 +202,17 @@ class DirectoryInfo(NodeInfo):
                 if not generate_unique_name:
                     raise FileExistsError
             return FileInfo(path)
+
+    # override common methods
+
+    def is_exists(self) -> bool:
+        return self.is_directory()
+
+    def is_directory(self) -> bool:
+        ''' check if this is a exists directory. '''
+        return os.path.isdir(self._path)
+
+    # override @abstractmethod
 
     def delete(self):
         ''' remove the directory from disk. '''
