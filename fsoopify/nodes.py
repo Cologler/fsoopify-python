@@ -74,6 +74,11 @@ class FileInfo(NodeInfo):
                     newline=newline,
                     closefd=closefd)
 
+    @property
+    def size(self):
+        ''' get file size. '''
+        return os.path.getsize(self.path)
+
     def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None):
         ''' write data into the file. '''
         if mode is None:
