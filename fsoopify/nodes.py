@@ -7,7 +7,7 @@
 # ----------
 
 import os
-import typing
+from abc import abstractmethod
 from .paths import Path
 
 class NodeInfo:
@@ -48,15 +48,19 @@ class NodeInfo:
         ''' create from path. '''
         if os.path.isdir(path):
             return DirectoryInfo(path)
-        elif os.path.isfile(path):
+
+        if os.path.isfile(path):
             return FileInfo(path)
-        else:
-            return None
+
+        return None
+
+    @abstractmethod
+    def create_hardlink(self, dest_path: str):
+        ''' create hardlink for the node. '''
+        pass
 
 
 class FileInfo(NodeInfo):
-    def __init__(self, path):
-        super().__init__(path)
 
     def is_exists(self) -> bool:
         return self.is_file()
@@ -123,10 +127,12 @@ class FileInfo(NodeInfo):
         ''' remove the file from disk. '''
         os.remove(self._path)
 
+    def create_hardlink(self, dest_path: str):
+        ''' create hardlink for the file. '''
+        os.link(self._path, dest_path)
+
 
 class DirectoryInfo(NodeInfo):
-    def __init__(self, path):
-        super().__init__(path)
 
     def is_exists(self) -> bool:
         return self.is_directory()
@@ -191,3 +197,14 @@ class DirectoryInfo(NodeInfo):
     def delete(self):
         ''' remove the directory from disk. '''
         os.rmdir(self._path)
+
+    def create_hardlink(self, dest_path: str):
+        ''' create hardlink for the directory (includes childs). '''
+
+        # self
+        dirinfo = DirectoryInfo(dest_path)
+        dirinfo.ensure_created()
+
+        # child
+        for item in self.list_items():
+            item.create_hardlink(os.path.join(dest_path, item.path.name))
