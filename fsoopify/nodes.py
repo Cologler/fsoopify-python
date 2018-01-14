@@ -147,6 +147,41 @@ class FileInfo(NodeInfo):
         ''' create hardlink for the file. '''
         os.link(self._path, dest_path)
 
+    # load/dump system.
+
+    _REGISTERED_SERIALIZERS = {}
+
+    def load(self, fmt):
+        return self._load_serializer(fmt).load(self)
+
+    def dump(self, fmt, obj):
+        return self._load_serializer(fmt).dump(self, obj)
+
+    @classmethod
+    def _load_serializer(cls, fmt):
+        if not isinstance(fmt, str):
+            raise TypeError(f'format must be str.')
+
+        if fmt not in cls._REGISTERED_SERIALIZERS:
+            import importlib
+            try:
+                importlib.import_module('.extras.' + fmt, 'fsoopify')
+            except ImportError:
+                cls._REGISTERED_SERIALIZERS[fmt] = None
+
+        typ = cls._REGISTERED_SERIALIZERS.get(fmt)
+        if typ is None:
+            raise ValueError(f'unknown format: {fmt}')
+        return typ()
+
+    @classmethod
+    def register_format(cls, fmt):
+        ''' register a serializer for load and dump. '''
+        def w(c):
+            cls._REGISTERED_SERIALIZERS[fmt] = c
+            return c
+        return w
+
 
 class DirectoryInfo(NodeInfo):
 

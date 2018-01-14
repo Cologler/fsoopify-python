@@ -32,6 +32,13 @@ class Test(unittest.TestCase):
         self.assertEqual(path.name.pure_name, os.path.splitext(os.path.split(rpath)[1])[0])
         self.assertEqual(path.name.ext, os.path.splitext(os.path.split(rpath)[1])[1])
 
+    def test_ext_json(self):
+        fi = FileInfo('abc.json')
+        example = { 'a': 1, 'b': '2' }
+        fi.dump('json', example)
+        data = fi.load('json')
+        self.assertDictEqual(example, data)
+
 
 def main(argv=None):
     if argv is None:
