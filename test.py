@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
     test_data_dir.ensure_created()
 
     def test_extra_json(self):
-        for fmt in ('json', 'json5', 'yaml', 'toml'):
+        for fmt in ('json', 'json5', 'yaml', 'toml', 'pickle'):
             fi = self.test_data_dir.get_fileinfo(f'test_data_{fmt}.{fmt}')
             example = {
                 'a': 1,
