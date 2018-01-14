@@ -100,12 +100,12 @@ class FileInfo(NodeInfo):
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
 
-    def write_text(self, text: str, encoding='utf-8', append=True):
+    def write_text(self, text: str, *, encoding='utf-8', append=True):
         ''' write text into the file. '''
         mode = 'a' if append else 'w'
         return self.write(text, mode=mode, encoding=encoding)
 
-    def write_bytes(self, data: bytes, append=True):
+    def write_bytes(self, data: bytes, *, append=True):
         ''' write bytes into the file. '''
         mode = 'ab' if append else 'wb'
         return self.write(data, mode=mode)
