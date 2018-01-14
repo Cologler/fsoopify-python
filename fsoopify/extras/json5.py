@@ -6,16 +6,16 @@
 #
 # ----------
 
-import json
+import json5
 from ..nodes import FileInfo
 
 # pylint: disable=R0201,C0111
 
 @FileInfo.register_format(__name__.split('.')[-1])
-class JsonSerializer:
+class Json5Serializer:
 
     def load(self, src: FileInfo):
-        return json.loads(src.read_text())
+        return json5.loads(src.read_text())
 
     def dump(self, src: FileInfo, obj):
-        return src.write_text(json.dumps(obj), append=False)
+        return src.write_text(json5.dumps(obj), append=False)

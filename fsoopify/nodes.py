@@ -152,9 +152,11 @@ class FileInfo(NodeInfo):
     _REGISTERED_SERIALIZERS = {}
 
     def load(self, fmt):
+        ''' deserialize object from the file. '''
         return self._load_serializer(fmt).load(self)
 
     def dump(self, fmt, obj):
+        ''' serialize the `obj` into file. '''
         return self._load_serializer(fmt).dump(self, obj)
 
     @classmethod

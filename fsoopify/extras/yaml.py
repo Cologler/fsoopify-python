@@ -6,16 +6,16 @@
 #
 # ----------
 
-import json
+import yaml
 from ..nodes import FileInfo
 
 # pylint: disable=R0201,C0111
 
 @FileInfo.register_format(__name__.split('.')[-1])
-class JsonSerializer:
+class YamlSerializer:
 
     def load(self, src: FileInfo):
-        return json.loads(src.read_text())
+        return yaml.load(src.read_text())
 
     def dump(self, src: FileInfo, obj):
-        return src.write_text(json.dumps(obj), append=False)
+        return src.write_text(yaml.dump(obj), append=False)
