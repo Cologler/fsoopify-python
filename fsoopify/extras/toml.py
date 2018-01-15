@@ -14,8 +14,8 @@ from ..nodes import FileInfo
 @FileInfo.register_format(__name__.split('.')[-1])
 class TomlSerializer:
 
-    def load(self, src: FileInfo):
-        return toml.loads(src.read_text())
+    def load(self, src: FileInfo, kwargs):
+        return toml.loads(src.read_text(), **kwargs)
 
-    def dump(self, src: FileInfo, obj):
-        return src.write_text(toml.dumps(obj), append=False)
+    def dump(self, src: FileInfo, obj, kwargs):
+        return src.write_text(toml.dumps(obj, **kwargs), append=False)

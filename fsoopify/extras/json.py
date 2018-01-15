@@ -14,8 +14,8 @@ from ..nodes import FileInfo
 @FileInfo.register_format(__name__.split('.')[-1])
 class JsonSerializer:
 
-    def load(self, src: FileInfo):
-        return json.loads(src.read_text())
+    def load(self, src: FileInfo, kwargs):
+        return json.loads(src.read_text(), **kwargs)
 
-    def dump(self, src: FileInfo, obj):
-        return src.write_text(json.dumps(obj), append=False)
+    def dump(self, src: FileInfo, obj, kwargs):
+        return src.write_text(json.dumps(obj, **kwargs), append=False)

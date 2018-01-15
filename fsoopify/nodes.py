@@ -158,7 +158,7 @@ class FileInfo(NodeInfo):
 
     _REGISTERED_SERIALIZERS = {}
 
-    def load(self, fmt):
+    def load(self, fmt, *, kwargs={}):
         '''
         deserialize object from the file.
 
@@ -167,11 +167,11 @@ class FileInfo(NodeInfo):
         '''
         serializer = self._load_serializer(fmt)
         try:
-            return serializer.load(self)
+            return serializer.load(self, kwargs)
         except Exception as err:
             raise SerializeError(err)
 
-    def dump(self, fmt, obj):
+    def dump(self, fmt, obj, *, kwargs={}):
         '''
         serialize the `obj` into file.
 
@@ -180,7 +180,7 @@ class FileInfo(NodeInfo):
         '''
         serializer = self._load_serializer(fmt)
         try:
-            return serializer.dump(self, obj)
+            return serializer.dump(self, obj, kwargs)
         except Exception as err:
             raise SerializeError(err)
 

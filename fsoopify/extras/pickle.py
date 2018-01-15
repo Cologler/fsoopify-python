@@ -14,8 +14,8 @@ from ..nodes import FileInfo
 @FileInfo.register_format(__name__.split('.')[-1])
 class PickleSerializer:
 
-    def load(self, src: FileInfo):
-        return pickle.loads(src.read_bytes())
+    def load(self, src: FileInfo, kwargs):
+        return pickle.loads(src.read_bytes(), **kwargs)
 
-    def dump(self, src: FileInfo, obj):
-        return src.write_bytes(pickle.dumps(obj), append=False)
+    def dump(self, src: FileInfo, obj, kwargs):
+        return src.write_bytes(pickle.dumps(obj, **kwargs), append=False)
