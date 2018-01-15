@@ -10,6 +10,13 @@ import os
 from abc import abstractmethod
 from .paths import Path
 
+class FormatNotFoundError(Exception):
+    pass
+
+class SerializeError(Exception):
+    pass
+
+
 class NodeInfo:
     ''' the abstract base class for file system node. '''
 
@@ -152,12 +159,30 @@ class FileInfo(NodeInfo):
     _REGISTERED_SERIALIZERS = {}
 
     def load(self, fmt):
-        ''' deserialize object from the file. '''
-        return self._load_serializer(fmt).load(self)
+        '''
+        deserialize object from the file.
+
+        * raise `FormatNotFoundError` on unknown format.
+        * raise `SerializeError` on any exceptions.
+        '''
+        serializer = self._load_serializer(fmt)
+        try:
+            return serializer.load(self)
+        except Exception as err:
+            raise SerializeError(err)
 
     def dump(self, fmt, obj):
-        ''' serialize the `obj` into file. '''
-        return self._load_serializer(fmt).dump(self, obj)
+        '''
+        serialize the `obj` into file.
+
+        * raise `FormatNotFoundError` on unknown format.
+        * raise `SerializeError` on any exceptions.
+        '''
+        serializer = self._load_serializer(fmt)
+        try:
+            return serializer.dump(self, obj)
+        except Exception as err:
+            raise SerializeError(err)
 
     @classmethod
     def _load_serializer(cls, fmt):
@@ -173,7 +198,7 @@ class FileInfo(NodeInfo):
 
         typ = cls._REGISTERED_SERIALIZERS.get(fmt)
         if typ is None:
-            raise ValueError(f'unknown format: {fmt}')
+            raise FormatNotFoundError(f'unknown format: {fmt}')
         return typ()
 
     @classmethod
@@ -224,8 +249,10 @@ class DirectoryInfo(NodeInfo):
     def create_fileinfo(self, name: str, generate_unique_name: bool = False):
         '''
         create a `FileInfo` for a new file.
+
         if the file was exists, and `generate_unique_name` if `False`, raise `FileExistsError`.
-        this op does mean the file is created on disk.
+
+        the op does mean the file is created on disk.
         '''
         def enumerate_name():
             yield name

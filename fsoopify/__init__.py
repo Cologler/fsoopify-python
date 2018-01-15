@@ -6,7 +6,8 @@
 #
 # ----------
 
+from .paths import Path
 from .nodes import (
-    Path,
     NodeInfo, DirectoryInfo, FileInfo,
+    FormatNotFoundError, SerializeError,
 )
