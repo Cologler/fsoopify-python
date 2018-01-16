@@ -6,7 +6,14 @@
 #
 # ----------
 
-import json5
+try:
+    import json5
+except ModuleNotFoundError as err:
+    raise ModuleNotFoundError('\n'.join([
+        f'{err}. try install it from pip:',
+        f'    pip install json5'
+    ]))
+
 from ..nodes import FileInfo
 
 # pylint: disable=R0201,C0111

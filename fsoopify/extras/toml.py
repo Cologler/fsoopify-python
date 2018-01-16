@@ -6,7 +6,13 @@
 #
 # ----------
 
-import toml
+try:
+    import toml
+except ModuleNotFoundError as err:
+    raise ModuleNotFoundError('\n'.join([
+        f'{err}. try install it from pip:',
+        f'    pip install toml'
+    ]))
 from ..nodes import FileInfo
 
 # pylint: disable=R0201,C0111
