@@ -158,31 +158,48 @@ class FileInfo(NodeInfo):
 
     _REGISTERED_SERIALIZERS = {}
 
-    def load(self, fmt, *, kwargs={}):
+    def load(self, fmt=None, *, kwargs={}):
         '''
         deserialize object from the file.
 
         * raise `FormatNotFoundError` on unknown format.
         * raise `SerializeError` on any exceptions.
         '''
+        if fmt is None:
+            fmt = self._detect_fmt()
         serializer = self._load_serializer(fmt)
         try:
             return serializer.load(self, kwargs)
         except Exception as err:
             raise SerializeError(err)
 
-    def dump(self, fmt, obj, *, kwargs={}):
+    def dump(self, obj, fmt=None, *, kwargs={}):
         '''
         serialize the `obj` into file.
 
         * raise `FormatNotFoundError` on unknown format.
         * raise `SerializeError` on any exceptions.
         '''
+        if fmt is None:
+            fmt = self._detect_fmt()
         serializer = self._load_serializer(fmt)
         try:
             return serializer.dump(self, obj, kwargs)
         except Exception as err:
             raise SerializeError(err)
+
+    def _detect_fmt(self):
+        fmt_table = {
+            '.json' : 'json',
+            '.json5': 'json5',
+            '.yaml' : 'yaml',
+            '.toml' : 'toml'
+        }
+        ext = self.path.name.ext
+        try:
+            return fmt_table[ext.lower()]
+        except KeyError:
+            raise RuntimeError(f'cannot detect format from ext "{ext}".')
 
     @classmethod
     def _load_serializer(cls, fmt):

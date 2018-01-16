@@ -35,9 +35,9 @@ class Test(unittest.TestCase):
     test_data_dir = DirectoryInfo('test_data_dir')
     test_data_dir.ensure_created()
 
-    def test_extra_json(self):
+    def test_extra(self):
         for fmt in ('json', 'json5', 'yaml', 'toml', 'pickle'):
-            fi = self.test_data_dir.get_fileinfo(f'test_data_{fmt}.{fmt}')
+            fi = self.test_data_dir.get_fileinfo(f'test_data_1_{fmt}.{fmt}')
             example = {
                 'a': 1,
                 'b': '2',
@@ -45,9 +45,31 @@ class Test(unittest.TestCase):
                     'd': 'ddddd'
                 }
             }
-            fi.dump(fmt, example)
+            fi.dump(example, fmt)
             data = fi.load(fmt)
             self.assertDictEqual(example, data)
+
+    def test_extra_auto_format(self):
+        example = {
+            'a': 1,
+            'b': '2',
+            'c': {
+                'd': 'ddddd'
+            }
+        }
+
+        for fmt in ('json', 'json5', 'yaml', 'toml'):
+            fi = self.test_data_dir.get_fileinfo(f'test_data_2_{fmt}.{fmt}')
+            fi.dump(example)
+            data = fi.load()
+            self.assertDictEqual(example, data)
+
+        for fmt in ('pickle', ):
+            fi = self.test_data_dir.get_fileinfo(f'test_data_2_{fmt}.{fmt}')
+            with self.assertRaises(RuntimeError):
+                fi.dump(example)
+            with self.assertRaises(RuntimeError):
+                data = fi.load()
 
 
 def main(argv=None):
