@@ -7,12 +7,33 @@
 # ----------
 
 import os
+from abc import abstractmethod, abstractproperty
+from typing import Tuple
 
-class PathPart(str):
+class IPathComponent(str):
+    def __eq__(self, other):
+        if isinstance(other, IPathComponent):
+            return self.normalcase == other.normalcase
+        if isinstance(other, str):
+            return self.normalcase == os.path.normcase(other)
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(self.normalcase)
+
+    def equals(self, other):
+        ''' compare with `os.path.normcase()` '''
+        return self == other
+
+    @abstractproperty
+    def normalcase(self):
+        raise NotImplementedError
+
+
+class PathComponent(IPathComponent):
     def __init__(self, val):
         if not isinstance(val, str):
             raise TypeError
-        self._val = val
         self._normcased = os.path.normcase(val)
 
     def __repr__(self):
@@ -23,12 +44,8 @@ class PathPart(str):
         ''' return normcase path which create from `os.path.normcase()`. '''
         return self._normcased
 
-    def equals(self, other):
-        ''' compare with `os.path.normcase()` '''
-        return self._normcased == os.path.normcase(other)
 
-
-class NamePart(PathPart):
+class NameComponent(PathComponent):
     def __init__(self, val):
         super().__init__(val)
         self._pure_name = None
@@ -37,17 +54,17 @@ class NamePart(PathPart):
     def __ensure_pure_name(self):
         if self._pure_name is None:
             pn, ext = os.path.splitext(self)
-            self._pure_name = PathPart(pn)
-            self._ext = PathPart(ext)
+            self._pure_name = PathComponent(pn)
+            self._ext = PathComponent(ext)
 
     @property
-    def pure_name(self) -> PathPart:
+    def pure_name(self) -> PathComponent:
         ''' get name without ext from path. '''
         self.__ensure_pure_name()
         return self._pure_name
 
     @property
-    def ext(self) -> PathPart:
+    def ext(self) -> PathComponent:
         ''' get ext from path. '''
         self.__ensure_pure_name()
         return self._ext
@@ -55,25 +72,30 @@ class NamePart(PathPart):
     def replace_pure_name(self, val):
         if not isinstance(val, str):
             raise TypeError
-        return NamePart(val + self.ext)
+        return NameComponent(val + self.ext)
 
     def replace_ext(self, val):
         if not isinstance(val, str):
             raise TypeError
-        return NamePart(self.pure_name + val)
+        return NameComponent(self.pure_name + val)
 
 
-class Path(PathPart):
+class Path(PathComponent):
     def __init__(self, val):
         super().__init__(val)
         self._dirname = None
         self._name = None
 
+    def __truediv__(self, right):
+        if isinstance(right, str):
+            return Path(os.path.join(self, right))
+        return NotImplemented
+
     def __ensure_dirname(self):
         if self._dirname is None:
             dn, fn = os.path.split(self)
             self._dirname = Path(dn)
-            self._name = NamePart(fn)
+            self._name = NameComponent(fn)
 
     @property
     def dirname(self):
@@ -82,18 +104,18 @@ class Path(PathPart):
         return self._dirname
 
     @property
-    def name(self) -> NamePart:
+    def name(self) -> NameComponent:
         ''' get name from path. '''
         self.__ensure_dirname()
         return self._name
 
     @property
-    def pure_name(self) -> PathPart:
+    def pure_name(self) -> PathComponent:
         ''' get name without ext from path. '''
         return self.name.pure_name
 
     @property
-    def ext(self) -> PathPart:
+    def ext(self) -> PathComponent:
         ''' get ext from path. '''
         return self.name.ext
 
