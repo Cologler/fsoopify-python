@@ -21,7 +21,7 @@ from ..nodes import FileInfo
 class YamlSerializer:
 
     def load(self, src: FileInfo, kwargs):
-        return yaml.load(src.read_text(), **kwargs)
+        return yaml.safe_load(src.read_text(), **kwargs)
 
     def dump(self, src: FileInfo, obj, kwargs):
         return src.write_text(yaml.dump(obj, **kwargs), append=False)
