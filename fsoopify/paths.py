@@ -22,7 +22,8 @@ class IPathComponent(str):
 
     def equals(self, other):
         ''' compare with `os.path.normcase()` '''
-        return self == other
+        ret = self == other
+        return False if ret is NotImplemented else ret
 
     @abstractproperty
     def normalcase(self):

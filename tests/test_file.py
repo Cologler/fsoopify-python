@@ -19,19 +19,6 @@ class Test(unittest.TestCase):
     def test_node(self):
         NodeInfo.from_path('.').list_items
 
-    def test_path(self):
-        rpath = r'D:\Projects-Arc\fsoopify-python.xx'
-        path = Path(rpath)
-
-        self.assertEqual(path, rpath)
-        self.assertEqual(path.normalcase, os.path.normcase(rpath))
-        self.assertTrue(path.equals(rpath.upper()))
-
-        self.assertEqual(path.dirname, os.path.dirname(rpath))
-        self.assertEqual(path.name, os.path.split(rpath)[1])
-        self.assertEqual(path.name.pure_name, os.path.splitext(os.path.split(rpath)[1])[0])
-        self.assertEqual(path.name.ext, os.path.splitext(os.path.split(rpath)[1])[1])
-
     test_data_dir = DirectoryInfo('test_data_dir')
     test_data_dir.ensure_created()
 

@@ -6,12 +6,14 @@
 #
 # ----------
 
+import sys
 import os
 from abc import abstractmethod
 from .paths import Path
 
 class FormatNotFoundError(Exception):
     pass
+
 
 class SerializeError(Exception):
     pass
@@ -31,19 +33,37 @@ class NodeInfo:
 
     @property
     def path(self) -> Path:
-        ''' return a Path object. '''
+        '''
+        return a Path object.
+        '''
         return self._path
 
     def rename(self, dest_path: str):
-        ''' use `os.rename()` to move the node. '''
+        '''
+        use `os.rename()` to move the node.
+        '''
         if not isinstance(dest_path, str):
             raise TypeError
         os.rename(self._path, dest_path)
         self._path = Path(dest_path)
 
+    def get_parent(self):
+        '''
+        get parent dir as a `DirectoryInfo`.
+
+        return `None` if self is top.
+        '''
+        if self.path.dirname == self.path:
+            return None
+        return DirectoryInfo(self.path.dirname)
+
     @staticmethod
     def from_path(path):
-        ''' create from path. '''
+        '''
+        create from path.
+
+        return `None` if path is not exists.
+        '''
         if os.path.isdir(path):
             return DirectoryInfo(path)
 
@@ -52,18 +72,38 @@ class NodeInfo:
 
         return None
 
+    @staticmethod
+    def from_cwd():
+        '''
+        get a `DirectoryInfo` by `os.getcwd()`
+        '''
+        return DirectoryInfo(os.getcwd())
+
+    @staticmethod
+    def from_argv0():
+        '''
+        get a `FileInfo` by `sys.argv[0]`
+        '''
+        return FileInfo(sys.argv[0])
+
     # common methods
 
     def is_exists(self):
-        ''' check whether the node is exists on disk. '''
+        '''
+        get whether the node is exists on disk.
+        '''
         return os.path.exists(self._path)
 
     def is_directory(self):
-        ''' check whether the node is a exists directory. '''
+        '''
+        get whether the node is a exists directory.
+        '''
         return False
 
     def is_file(self):
-        ''' check whether the node is a exists file. '''
+        '''
+        get whether the node is a exists file.
+        '''
         return False
 
     # abstract methods
@@ -71,12 +111,12 @@ class NodeInfo:
     @abstractmethod
     def delete(self):
         ''' remove the node from disk. '''
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def create_hardlink(self, dest_path: str):
         ''' create hardlink for the node. '''
-        pass
+        raise NotImplementedError
 
 
 class FileInfo(NodeInfo):
@@ -162,6 +202,9 @@ class FileInfo(NodeInfo):
         '''
         deserialize object from the file.
 
+        auto detect format by file extension name if `fmt` is None.
+        for example, `.json` will detect as `json`.
+
         * raise `FormatNotFoundError` on unknown format.
         * raise `SerializeError` on any exceptions.
         '''
@@ -238,11 +281,12 @@ class DirectoryInfo(NodeInfo):
         if not self.is_directory():
             self.create()
 
-    def list_items(self, depth: int = 1):
-        ''' get items from directory. '''
+    def iter_items(self, depth: int = 1):
+        '''
+        get items from directory.
+        '''
         if depth is not None and not isinstance(depth, int):
             raise TypeError
-        items = []
         def itor(root, d):
             if d is not None:
                 d -= 1
@@ -251,19 +295,24 @@ class DirectoryInfo(NodeInfo):
             for name in os.listdir(root):
                 path = os.path.join(root, name)
                 node = NodeInfo.from_path(path)
-                items.append(node)
+                yield node
                 if isinstance(node, DirectoryInfo):
-                    itor(path, d)
-        itor(self._path, depth)
-        return items
+                    yield from itor(path, d)
+        yield from itor(self._path, depth)
+
+    def list_items(self, depth: int = 1):
+        '''
+        get items from directory.
+        '''
+        return list(self.iter_items(depth))
 
     def get_fileinfo(self, name: str):
         '''
-        get a `FileInfo` for a file.
+        get a `FileInfo` for a file (without create actual file).
         '''
         return FileInfo(os.path.join(self._path, name))
 
-    def create_fileinfo(self, name: str, generate_unique_name: bool = False):
+    def create_file(self, name: str, generate_unique_name: bool = False):
         '''
         create a `FileInfo` for a new file.
 
@@ -276,13 +325,15 @@ class DirectoryInfo(NodeInfo):
             index = 0
             while True:
                 index += 1
-                yield '{} ({})'.format(name, index)
+                yield f'{name} ({index})'
         for n in enumerate_name():
             path = os.path.join(self._path, n)
             if os.path.exists(path):
                 if not generate_unique_name:
                     raise FileExistsError
             return FileInfo(path)
+
+    create_fileinfo = create_file # keep old name
 
     # override common methods
 
