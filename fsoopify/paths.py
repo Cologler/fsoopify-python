@@ -7,8 +7,7 @@
 # ----------
 
 import os
-from abc import abstractmethod, abstractproperty
-from typing import Tuple
+from abc import abstractproperty
 
 class IPathComponent(str):
     def __eq__(self, other):
