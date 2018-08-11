@@ -79,6 +79,7 @@ class Name(PathComponent):
 class Path(PathComponent):
     def __init__(self, val):
         super().__init__(val)
+        # sub attrs
         self._dirname = None
         self._name = None
         # abs attrs
@@ -90,7 +91,7 @@ class Path(PathComponent):
             return Path(os.path.join(self, right))
         return NotImplemented
 
-    def __ensure_dirname(self):
+    def __ensure_dirname_attr(self):
         if self._dirname is None:
             dn, fn = os.path.split(self)
             self._dirname = Path(dn)
@@ -99,13 +100,13 @@ class Path(PathComponent):
     @property
     def dirname(self):
         ''' get directory path from path. '''
-        self.__ensure_dirname()
+        self.__ensure_dirname_attr()
         return self._dirname
 
     @property
     def name(self) -> Name:
         ''' get name from path. '''
-        self.__ensure_dirname()
+        self.__ensure_dirname_attr()
         return self._name
 
     @property
@@ -138,16 +139,16 @@ class Path(PathComponent):
     def replace_ext(self, val):
         return Path(os.path.join(self.dirname, self.name.replace_ext(val)))
 
-    def __init_abspath_attr(self):
+    def __ensure_abspath_attr(self):
         if self._is_abspath is None:
             abs_path = os.path.abspath(self)
             self._is_abspath = self == abs_path
             self._abspath = self if self._is_abspath else Path(abs_path)
 
     def get_abspath(self):
-        self.__init_abspath_attr()
+        self.__ensure_abspath_attr()
         return self._abspath
 
     def is_abspath(self):
-        self.__init_abspath_attr()
+        self.__ensure_abspath_attr()
         return self._is_abspath
