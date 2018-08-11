@@ -7,11 +7,18 @@
 # ----------
 
 import os
-from abc import abstractproperty
 
-class IPathComponent(str):
+class PathComponent(str):
+    def __init__(self, val):
+        if not isinstance(val, str):
+            raise TypeError
+        self._normcased: str = None
+
+    def __repr__(self):
+        return '{}(\'{}\')'.format(type(self).__name__, self)
+
     def __eq__(self, other):
-        if isinstance(other, IPathComponent):
+        if isinstance(other, PathComponent):
             return self.normalcase == other.normalcase
         if isinstance(other, str):
             return self.normalcase == os.path.normcase(other)
@@ -20,32 +27,21 @@ class IPathComponent(str):
     def __hash__(self):
         return hash(self.normalcase)
 
-    def equals(self, other):
-        ''' compare with `os.path.normcase()` '''
-        ret = self == other
-        return False if ret is NotImplemented else ret
-
-    @abstractproperty
-    def normalcase(self):
-        raise NotImplementedError
-
-
-class PathComponent(IPathComponent):
-    def __init__(self, val):
-        if not isinstance(val, str):
-            raise TypeError
-        self._normcased = os.path.normcase(val)
-
-    def __repr__(self):
-        return '{}(\'{}\')'.format(type(self).__name__, self)
-
     @property
     def normalcase(self):
-        ''' return normcase path which create from `os.path.normcase()`. '''
+        '''
+        get normcase path which create by `os.path.normcase()`.
+        '''
+        if self._normcased is None:
+            self._normcased = os.path.normcase(self)
         return self._normcased
 
 
-class NameComponent(PathComponent):
+class Name(PathComponent):
+    '''
+    the name part of path.
+    '''
+
     def __init__(self, val):
         super().__init__(val)
         self._pure_name = None
@@ -72,12 +68,12 @@ class NameComponent(PathComponent):
     def replace_pure_name(self, val):
         if not isinstance(val, str):
             raise TypeError
-        return NameComponent(val + self.ext)
+        return Name(val + self.ext)
 
     def replace_ext(self, val):
         if not isinstance(val, str):
             raise TypeError
-        return NameComponent(self.pure_name + val)
+        return Name(self.pure_name + val)
 
 
 class Path(PathComponent):
@@ -95,7 +91,7 @@ class Path(PathComponent):
         if self._dirname is None:
             dn, fn = os.path.split(self)
             self._dirname = Path(dn)
-            self._name = NameComponent(fn)
+            self._name = Name(fn)
 
     @property
     def dirname(self):
@@ -104,7 +100,7 @@ class Path(PathComponent):
         return self._dirname
 
     @property
-    def name(self) -> NameComponent:
+    def name(self) -> Name:
         ''' get name from path. '''
         self.__ensure_dirname()
         return self._name
@@ -121,7 +117,7 @@ class Path(PathComponent):
 
     def is_ext_equals(self, val):
         ''' use `self.ext.equals()` instead。 '''
-        return self.ext.equals(val)
+        return self.ext == val
 
     def replace_dirname(self, val):
         if not isinstance(val, str):
