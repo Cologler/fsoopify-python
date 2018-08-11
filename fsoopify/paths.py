@@ -81,6 +81,9 @@ class Path(PathComponent):
         super().__init__(val)
         self._dirname = None
         self._name = None
+        # abs attrs
+        self._is_abspath = None
+        self._abspath = None
 
     def __truediv__(self, right):
         if isinstance(right, str):
@@ -134,3 +137,17 @@ class Path(PathComponent):
 
     def replace_ext(self, val):
         return Path(os.path.join(self.dirname, self.name.replace_ext(val)))
+
+    def __init_abspath_attr(self):
+        if self._is_abspath is None:
+            abs_path = os.path.abspath(self)
+            self._is_abspath = self == abs_path
+            self._abspath = self if self._is_abspath else Path(abs_path)
+
+    def get_abspath(self):
+        self.__init_abspath_attr()
+        return self._abspath
+
+    def is_abspath(self):
+        self.__init_abspath_attr()
+        return self._is_abspath

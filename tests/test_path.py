@@ -21,16 +21,25 @@ def test_path_types():
     assert isinstance(path, str)
     assert issubclass(Path, str)
 
-def test_path_should_eq_str():
+def test_path_equals():
     path_str, path = get_path_from_argv_0()
     assert path == path_str
     assert path_str == path
-    #assert path == path_str.upper()
-    assert path == path_str.lower()
+    assert path == os.path.normcase(path_str.upper())
+    assert path == os.path.normcase(path_str.lower())
 
 def test_path_normalcase():
     path_str, path = get_path_from_argv_0()
-    assert os.path.normcase(path_str) == path.normalcase
+    assert path.normalcase == os.path.normcase(path_str)
+
+def test_path_abspath():
+    _, path = get_path_from_argv_0()
+    assert path.is_abspath()
+    assert path.get_abspath() is path
+
+    assert Path('c:\\').get_abspath() == 'c:\\'
+    assert Path('c:').get_abspath() == 'c:\\'
+    assert not Path('s').is_abspath()
 
 def test_path_dirname():
     path_str, path = get_path_from_argv_0()
