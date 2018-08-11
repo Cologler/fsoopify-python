@@ -141,9 +141,11 @@ class Path(PathComponent):
 
     def __ensure_abspath_attr(self):
         if self._is_abspath is None:
-            abs_path = os.path.abspath(self)
-            self._is_abspath = self == abs_path
-            self._abspath = self if self._is_abspath else Path(abs_path)
+            self._is_abspath = bool(os.path.splitdrive(self)[0])
+        if os.path.isabs(self):
+            self._abspath = self
+        else:
+            self._abspath = Path(os.path.abspath(self))
 
     def get_abspath(self):
         self.__ensure_abspath_attr()

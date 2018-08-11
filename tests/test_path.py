@@ -33,13 +33,31 @@ def test_path_normalcase():
     assert path.normalcase == os.path.normcase(path_str)
 
 def test_path_abspath():
-    _, path = get_path_from_argv_0()
-    assert path.is_abspath()
-    assert path.get_abspath() is path
+    path_str, path = get_path_from_argv_0()
+    assert path.is_abspath() == os.path.isabs(path_str)
+    assert path.get_abspath().is_abspath()
+    assert path.get_abspath() == os.path.abspath(path_str)
 
-    assert Path('c:\\').get_abspath() == 'c:\\'
-    assert Path('c:').get_abspath() == 'c:\\'
-    assert not Path('s').is_abspath()
+    path_str = 'c:\\'
+    path = Path(path_str)
+    assert os.path.isabs(path_str)
+    assert path.is_abspath() == os.path.isabs(path_str)
+    assert path.get_abspath().is_abspath()
+    assert path.get_abspath() == os.path.abspath(path_str)
+
+    # c: should be abspath!
+    path_str = 'c:'
+    path = Path(path_str)
+    assert not os.path.isabs(path_str)
+    assert path.is_abspath()
+    assert path.get_abspath() == os.path.abspath(path_str)
+
+    path_str = 's'
+    path = Path(path_str)
+    assert path.is_abspath() == os.path.isabs(path_str)
+    assert path.get_abspath().is_abspath()
+    assert path.get_abspath() == os.path.abspath(path_str)
+
 
 def test_path_dirname():
     path_str, path = get_path_from_argv_0()
