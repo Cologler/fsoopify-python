@@ -32,5 +32,21 @@ def test_node_get_parent():
     assert isinstance(parent_dir, DirectoryInfo)
     assert parent_dir.path == os.path.dirname(sys.argv[0])
 
-    top_dir = NodeInfo.from_path('c:')
+    # parent of root is None
+    top_dir = DirectoryInfo('c:')
     assert top_dir.get_parent() is None
+    top_dir = DirectoryInfo('c:\\')
+    assert top_dir.get_parent() is None
+
+    # parent of relative
+    some_node = DirectoryInfo('a\\b')
+    some_node = some_node.get_parent()
+    assert some_node.path == 'a'
+    some_node = some_node.get_parent()
+    assert some_node.path == '.'
+    some_node = some_node.get_parent()
+    assert some_node.path == '..'
+    some_node = some_node.get_parent()
+    assert some_node.path == '..\\..'
+    some_node = some_node.get_parent()
+    assert some_node.path == '..\\..\\..'
