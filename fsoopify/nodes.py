@@ -9,7 +9,9 @@
 import sys
 import os
 from abc import abstractmethod
+
 from .paths import Path
+from .size import Size
 
 class FormatNotFoundError(Exception):
     pass
@@ -147,7 +149,7 @@ class FileInfo(NodeInfo):
     @property
     def size(self):
         ''' get file size. '''
-        return os.path.getsize(self.path)
+        return Size(os.path.getsize(self.path))
 
     def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None):
         ''' write data into the file. '''
