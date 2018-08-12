@@ -285,6 +285,19 @@ class FileInfo(NodeInfo):
             return c
         return w
 
+    # hash system
+
+    def get_file_hash(self, *algorithms: str):
+        '''
+        get lower case hash of file.
+
+        return value is a tuple, you may need to unpack it.
+
+        for example: `get_file_hash('md5', 'sha1')` return `('XXXX1', 'XXXX2')`
+        '''
+        from .hashs import hashfile_hexdigest
+        return hashfile_hexdigest(self._path, algorithms)
+
 
 class DirectoryInfo(NodeInfo):
 
