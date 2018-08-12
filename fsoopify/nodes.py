@@ -328,6 +328,12 @@ class DirectoryInfo(NodeInfo):
         '''
         return FileInfo(os.path.join(self._path, name))
 
+    def get_dirinfo(self, name: str):
+        '''
+        get a `DirectoryInfo` for a directory (without create actual directory).
+        '''
+        return FileInfo(os.path.join(self._path, name))
+
     def create_file(self, name: str, generate_unique_name: bool = False):
         '''
         create a `FileInfo` for a new file.

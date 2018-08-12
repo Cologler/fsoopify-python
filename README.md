@@ -38,5 +38,5 @@ folder.create() and folder.ensure_created()
 folder.create_file()
 folder.iter_items()
 folder.list_items()
-folder.get_fileinfo()
+folder.get_fileinfo() and folder.get_dirinfo()
 ```
