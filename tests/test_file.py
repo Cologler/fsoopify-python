@@ -6,66 +6,37 @@
 #
 # ----------
 
-import os
-import sys
-import traceback
-import unittest
-from fsoopify import (
-    Path,
-    NodeInfo, DirectoryInfo, FileInfo,
-)
+from pytest import raises
 
-class Test(unittest.TestCase):
-    def test_node(self):
-        NodeInfo.from_path('.').list_items
+from fsoopify import DirectoryInfo, FormatNotFoundError
 
-    test_data_dir = DirectoryInfo('test_data_dir')
-    test_data_dir.ensure_created()
+test_data_dir = DirectoryInfo('test_data_dir')
+test_data_dir.ensure_created()
 
-    def test_extra(self):
-        for fmt in ('json', 'json5', 'yaml', 'toml', 'pickle'):
-            fi = self.test_data_dir.get_fileinfo(f'test_data_1_{fmt}.{fmt}')
-            example = {
-                'a': 1,
-                'b': '2',
-                'c': {
-                    'd': 'ddddd'
-                }
-            }
-            fi.dump(example, fmt)
-            data = fi.load(fmt)
-            self.assertDictEqual(example, data)
+example_data_1 = {
+    'a': 1,
+    'b': '2',
+    'c': {
+        'd': 'ddddd'
+    }
+}
 
-    def test_extra_auto_format(self):
-        example = {
-            'a': 1,
-            'b': '2',
-            'c': {
-                'd': 'ddddd'
-            }
-        }
+def test_dump_load_with_format():
+    for fmt in ('json', 'json5', 'yaml', 'toml', 'pickle'):
+        file_info = test_data_dir.get_fileinfo(f'test_data_1_{fmt}.{fmt}')
+        file_info.dump(example_data_1, fmt)
+        assert example_data_1 == file_info.load(fmt)
 
-        for fmt in ('json', 'json5', 'yaml', 'toml'):
-            fi = self.test_data_dir.get_fileinfo(f'test_data_2_{fmt}.{fmt}')
-            fi.dump(example)
-            data = fi.load()
-            self.assertDictEqual(example, data)
+def test_dump_load_with_auto_detect_format():
 
-        for fmt in ('pickle', ):
-            fi = self.test_data_dir.get_fileinfo(f'test_data_2_{fmt}.{fmt}')
-            with self.assertRaises(RuntimeError):
-                fi.dump(example)
-            with self.assertRaises(RuntimeError):
-                data = fi.load()
+    for ext in ('json', 'json5', 'yaml', 'toml'):
+        file_info = test_data_dir.get_fileinfo(f'test_data_2.{ext}')
+        file_info.dump(example_data_1)
+        assert example_data_1 == file_info.load()
 
-
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    try:
-        unittest.main()
-    except Exception:
-        traceback.print_exc()
-
-if __name__ == '__main__':
-    main()
+    for fmt in ('pickle', ):
+        fi = test_data_dir.get_fileinfo(f'test_data_2_{fmt}.{fmt}')
+        with raises(FormatNotFoundError):
+            fi.dump(example_data_1)
+        with raises(FormatNotFoundError):
+            fi.load()

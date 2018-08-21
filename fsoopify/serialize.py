@@ -27,7 +27,7 @@ def _detect_format(file_info):
     try:
         return _FORMAT_MAP[ext.lower()]
     except KeyError:
-        raise RuntimeError(f'cannot detect format from ext "{ext}".')
+        raise FormatNotFoundError(f'cannot detect format from ext "{ext}".')
 
 def load(file_info, format=None, *, kwargs={}):
     if format is None:
