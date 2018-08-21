@@ -9,10 +9,8 @@
 import os
 
 class PathComponent(str):
-    def __init__(self, val):
-        if not isinstance(val, str):
-            raise TypeError
-        self._normcased: str = None
+    def __init__(self, *args):
+        self._norm: str = None
 
     def __repr__(self):
         return '{}(\'{}\')'.format(type(self).__name__, self)
@@ -21,7 +19,7 @@ class PathComponent(str):
         if isinstance(other, PathComponent):
             return self.normalcase == other.normalcase
         if isinstance(other, str):
-            return self.normalcase == os.path.normcase(other)
+            return self.normalcase == os.path.normpath(os.path.normcase(other))
         return NotImplemented
 
     def __hash__(self):
@@ -32,9 +30,9 @@ class PathComponent(str):
         '''
         get normcase path which create by `os.path.normcase()`.
         '''
-        if self._normcased is None:
-            self._normcased = os.path.normcase(self)
-        return self._normcased
+        if self._norm is None:
+            self._norm = os.path.normpath(os.path.normcase(self))
+        return self._norm
 
 
 class Name(PathComponent):
