@@ -13,11 +13,13 @@ except ModuleNotFoundError as err:
         f'{err}. try install it from pip:',
         f'    pip install pyyaml'
     ]))
+
 from ..nodes import FileInfo
+from ..serialize import register_format
 
 # pylint: disable=R0201,C0111
 
-@FileInfo.register_format(__name__.split('.')[-1])
+@register_format(__name__.split('.')[-1])
 class YamlSerializer:
 
     def load(self, src: FileInfo, kwargs):

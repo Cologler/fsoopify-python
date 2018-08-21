@@ -12,13 +12,7 @@ from abc import abstractmethod
 
 from .paths import Path
 from .size import Size
-
-class FormatNotFoundError(Exception):
-    pass
-
-
-class SerializeError(Exception):
-    pass
+from .serialize import load, dump
 
 
 class NodeInfo:
@@ -212,78 +206,26 @@ class FileInfo(NodeInfo):
 
     # load/dump system.
 
-    _REGISTERED_SERIALIZERS = {}
-
-    def load(self, fmt=None, *, kwargs={}):
+    def load(self, format=None, *, kwargs={}):
         '''
         deserialize object from the file.
 
-        auto detect format by file extension name if `fmt` is None.
+        auto detect format by file extension name if `format` is None.
         for example, `.json` will detect as `json`.
 
         * raise `FormatNotFoundError` on unknown format.
-        * raise `SerializeError` on any exceptions.
+        * raise `SerializeError` on any serialize exceptions.
         '''
-        if fmt is None:
-            fmt = self._detect_fmt()
-        serializer = self._load_serializer(fmt)
-        try:
-            return serializer.load(self, kwargs)
-        except Exception as err:
-            raise SerializeError(err)
+        return load(self, format=format, kwargs=kwargs)
 
-    def dump(self, obj, fmt=None, *, kwargs={}):
+    def dump(self, obj, format=None, *, kwargs={}):
         '''
         serialize the `obj` into file.
 
         * raise `FormatNotFoundError` on unknown format.
-        * raise `SerializeError` on any exceptions.
+        * raise `SerializeError` on any serialize exceptions.
         '''
-        if fmt is None:
-            fmt = self._detect_fmt()
-        serializer = self._load_serializer(fmt)
-        try:
-            return serializer.dump(self, obj, kwargs)
-        except Exception as err:
-            raise SerializeError(err)
-
-    def _detect_fmt(self):
-        fmt_table = {
-            '.json' : 'json',
-            '.json5': 'json5',
-            '.yaml' : 'yaml',
-            '.toml' : 'toml'
-        }
-        ext = self.path.name.ext
-        try:
-            return fmt_table[ext.lower()]
-        except KeyError:
-            raise RuntimeError(f'cannot detect format from ext "{ext}".')
-
-    @classmethod
-    def _load_serializer(cls, fmt):
-        if not isinstance(fmt, str):
-            raise TypeError(f'format must be str.')
-
-        if fmt not in cls._REGISTERED_SERIALIZERS:
-            import importlib
-            try:
-                importlib.import_module('.extras.' + fmt, 'fsoopify')
-            except ImportError:
-                cls._REGISTERED_SERIALIZERS[fmt] = None
-
-        typ = cls._REGISTERED_SERIALIZERS.get(fmt)
-        if typ is None:
-            raise FormatNotFoundError(f'unknown format: {fmt}')
-        return typ()
-
-    @classmethod
-    def register_format(cls, fmt):
-        ''' register a serializer for load and dump. '''
-        def w(c):
-            cls._REGISTERED_SERIALIZERS[fmt] = c
-            return c
-        return w
+        return dump(self, obj, format=format, kwargs=kwargs)
 
     # hash system
 

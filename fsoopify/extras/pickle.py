@@ -7,11 +7,13 @@
 # ----------
 
 import pickle
+
 from ..nodes import FileInfo
+from ..serialize import register_format
 
 # pylint: disable=R0201,C0111
 
-@FileInfo.register_format(__name__.split('.')[-1])
+@register_format(__name__.split('.')[-1])
 class PickleSerializer:
 
     def load(self, src: FileInfo, kwargs):

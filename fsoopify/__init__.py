@@ -9,5 +9,7 @@
 from .paths import Path
 from .nodes import (
     NodeInfo, DirectoryInfo, FileInfo,
-    FormatNotFoundError, SerializeError,
+)
+from .serialize import (
+    FormatNotFoundError, SerializeError
 )
