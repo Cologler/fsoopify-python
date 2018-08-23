@@ -167,13 +167,28 @@ class FileInfo(NodeInfo):
         mode = 'ab' if append else 'wb'
         return self.write(data, mode=mode)
 
-    def copy_to(self, dest_path: str, buffering: int = -1):
-        ''' copy the file to dest path. '''
+    def copy_to(self, dest, buffering: int = -1):
+        '''
+        copy the file to dest path.
+
+        `dest` canbe `str`, `FileInfo` or `DirectoryInfo`.
+
+        if `dest` is `DirectoryInfo`, that mean copy into the dir with same name.
+        '''
+        if isinstance(dest, str):
+            dest_path = dest
+        elif isinstance(dest, FileInfo):
+            dest_path = dest.path
+        elif isinstance(dest, DirectoryInfo):
+            dest_path = dest.path / self.path.name
+        else:
+            raise TypeError('dest is not one of `str`, `FileInfo`, `DirectoryInfo`')
+
         with open(self._path, 'rb', buffering=buffering) as source:
             # use x mode to ensure dest does not exists.
-            with open(dest_path, 'xb') as dest:
+            with open(dest_path, 'xb') as dest_file:
                 for buffer in source:
-                    dest.write(buffer)
+                    dest_file.write(buffer)
 
     def read_text(self, encoding='utf-8') -> str:
         ''' read all text into memory. '''
