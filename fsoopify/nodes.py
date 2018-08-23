@@ -287,7 +287,7 @@ class DirectoryInfo(NodeInfo):
         '''
         get a `DirectoryInfo` for a directory (without create actual directory).
         '''
-        return FileInfo(os.path.join(self._path, name))
+        return DirectoryInfo(os.path.join(self._path, name))
 
     def create_file(self, name: str, generate_unique_name: bool = False):
         '''
