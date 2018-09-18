@@ -27,6 +27,12 @@ def test_path_equals():
     path_str, path = get_path_from_argv_0()
     assert path == path_str
     assert path_str == path
+
+@pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
+def test_path_equals_without_case():
+    path_str, path = get_path_from_argv_0()
+    assert path == path_str.upper()
+    assert path == path_str.lower()
     assert path == os.path.normcase(path_str.upper())
     assert path == os.path.normcase(path_str.lower())
 
