@@ -8,6 +8,7 @@
 
 from .paths import Path
 from .nodes import (
+    NodeType,
     NodeInfo, DirectoryInfo, FileInfo,
 )
 from .serialize import (

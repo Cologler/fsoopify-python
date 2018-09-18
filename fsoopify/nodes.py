@@ -9,10 +9,15 @@
 import sys
 import os
 from abc import abstractmethod
+from enum import Enum
 
 from .paths import Path
 from .size import Size
 from .serialize import load, dump
+
+class NodeType(Enum):
+    file = 1
+    dir = 2
 
 
 class NodeInfo:
@@ -97,6 +102,11 @@ class NodeInfo:
         return FileInfo(sys.argv[0])
 
     # common methods
+
+    @property
+    @abstractmethod
+    def node_type(self):
+        raise NotImplementedError
 
     def is_exists(self):
         '''
@@ -201,6 +211,10 @@ class FileInfo(NodeInfo):
             return fp.read()
 
     # override common methods
+
+    @property
+    def node_type(self):
+        return NodeType.file
 
     def is_exists(self) -> bool:
         return self.is_file()
@@ -328,6 +342,10 @@ class DirectoryInfo(NodeInfo):
     create_fileinfo = create_file # keep old name
 
     # override common methods
+
+    @property
+    def node_type(self):
+        return NodeType.dir
 
     def is_exists(self) -> bool:
         return self.is_directory()

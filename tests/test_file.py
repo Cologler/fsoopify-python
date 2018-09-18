@@ -8,7 +8,13 @@
 
 from pytest import raises
 
-from fsoopify import DirectoryInfo, FormatNotFoundError
+from fsoopify import (
+    NodeType,
+    DirectoryInfo, FormatNotFoundError, FileInfo
+)
+
+def test_dir_node_type():
+    assert FileInfo('.').node_type is NodeType.dir
 
 test_data_dir = DirectoryInfo('test_data_dir')
 test_data_dir.ensure_created()

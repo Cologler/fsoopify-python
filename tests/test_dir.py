@@ -5,7 +5,10 @@
 #
 # ----------
 
-from fsoopify import DirectoryInfo, FileInfo
+from fsoopify import DirectoryInfo, FileInfo, NodeType
+
+def test_dir_node_type():
+    assert DirectoryInfo('.').node_type is NodeType.dir
 
 def test_get_fileinfo():
     dir_info = DirectoryInfo('.')
