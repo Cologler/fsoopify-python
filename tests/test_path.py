@@ -8,6 +8,8 @@
 import sys
 import os
 
+import pytest
+
 from fsoopify import Path
 
 def get_path_from_argv_0():
@@ -38,6 +40,14 @@ def test_path_abspath():
     assert path.get_abspath().is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
 
+    path_str = 's'
+    path = Path(path_str)
+    assert path.is_abspath() == os.path.isabs(path_str)
+    assert path.get_abspath().is_abspath()
+    assert path.get_abspath() == os.path.abspath(path_str)
+
+@pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
+def test_path_abspath_win32_root():
     path_str = 'c:\\'
     path = Path(path_str)
     assert os.path.isabs(path_str)
@@ -45,19 +55,12 @@ def test_path_abspath():
     assert path.get_abspath().is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
 
-    # c: should be abspath!
+    # c: should be abspath
     path_str = 'c:'
     path = Path(path_str)
     assert not os.path.isabs(path_str)
     assert path.is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
-
-    path_str = 's'
-    path = Path(path_str)
-    assert path.is_abspath() == os.path.isabs(path_str)
-    assert path.get_abspath().is_abspath()
-    assert path.get_abspath() == os.path.abspath(path_str)
-
 
 def test_path_dirname():
     path_str, path = get_path_from_argv_0()

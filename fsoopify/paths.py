@@ -7,6 +7,9 @@
 # ----------
 
 import os
+import sys
+
+NT = sys.platform == 'win32'
 
 class PathComponent(str):
     def __init__(self, *args):
@@ -98,13 +101,13 @@ class Path(PathComponent):
 
     @property
     def dirname(self):
-        ''' get directory path from path. '''
+        ''' get directory component from path. '''
         self.__ensure_dirname_attr()
         return self._dirname
 
     @property
     def name(self) -> Name:
-        ''' get name from path. '''
+        ''' get name component from path. '''
         self.__ensure_dirname_attr()
         return self._name
 
@@ -117,10 +120,6 @@ class Path(PathComponent):
     def ext(self) -> PathComponent:
         ''' get ext from path. '''
         return self.name.ext
-
-    def is_ext_equals(self, val):
-        ''' use `self.ext.equals()` instead。 '''
-        return self.ext == val
 
     def replace_dirname(self, val):
         if not isinstance(val, str):
@@ -138,13 +137,22 @@ class Path(PathComponent):
     def replace_ext(self, val):
         return Path(os.path.join(self.dirname, self.name.replace_ext(val)))
 
-    def __ensure_abspath_attr(self):
-        if self._is_abspath is None:
-            self._is_abspath = bool(os.path.splitdrive(self)[0])
-        if os.path.isabs(self):
-            self._abspath = self
-        else:
-            self._abspath = Path(os.path.abspath(self))
+    if NT:
+        def __ensure_abspath_attr(self):
+            if self._is_abspath is None:
+                self._is_abspath = bool(os.path.splitdrive(self)[0])
+                if os.path.isabs(self):
+                    self._abspath = self
+                else:
+                    self._abspath = Path(os.path.abspath(self))
+    else:
+        def __ensure_abspath_attr(self):
+            if self._is_abspath is None:
+                self._is_abspath = os.path.isabs(self)
+                if self._is_abspath:
+                    self._abspath = self
+                else:
+                    self._abspath = Path(os.path.abspath(self))
 
     def get_abspath(self):
         self.__ensure_abspath_attr()
