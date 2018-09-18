@@ -18,11 +18,24 @@ class PathComponent(str):
     def __repr__(self):
         return '{}(\'{}\')'.format(type(self).__name__, self)
 
+    if NT:
+        @staticmethod
+        def _get_normpath(path: str):
+            val = str(path) # avoid recursion
+            if val.endswith(':'):
+                val += os.path.sep
+            return os.path.normpath(os.path.normcase(val))
+    else:
+        @staticmethod
+        def _get_normpath(path: str):
+            val = str(path) # avoid recursion
+            return os.path.normpath(os.path.normcase(val))
+
     def __eq__(self, other):
         if isinstance(other, PathComponent):
             return self.normalcase == other.normalcase
         if isinstance(other, str):
-            return self.normalcase == os.path.normpath(os.path.normcase(other))
+            return self.normalcase == self._get_normpath(other)
         return NotImplemented
 
     def __hash__(self):
@@ -34,8 +47,7 @@ class PathComponent(str):
         get normcase path which create by `os.path.normcase()`.
         '''
         if self._norm is None:
-            val = str(self) # avoid recursion on linux
-            self._norm = os.path.normpath(os.path.normcase(val))
+            self._norm = self._get_normpath(self)
         return self._norm
 
 

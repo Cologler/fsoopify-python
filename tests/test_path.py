@@ -28,6 +28,10 @@ def test_path_equals():
     assert path == path_str
     assert path_str == path
 
+    if sys.platform == 'win32':
+        assert Path('c:\\') == Path('c:')
+        assert Path('c:\\') == Path('C:')
+
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
 def test_path_equals_without_case():
     path_str, path = get_path_from_argv_0()
@@ -53,7 +57,7 @@ def test_path_abspath():
     assert path.get_abspath() == os.path.abspath(path_str)
 
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
-def test_path_abspath_win32_root():
+def test_abspath_root_win32():
     path_str = 'c:\\'
     path = Path(path_str)
     assert os.path.isabs(path_str)
