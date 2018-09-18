@@ -31,7 +31,8 @@ class PathComponent(str):
         get normcase path which create by `os.path.normcase()`.
         '''
         if self._norm is None:
-            self._norm = os.path.normpath(os.path.normcase(self))
+            val = str(self) # avoid recursion on linux
+            self._norm = os.path.normpath(os.path.normcase(val))
         return self._norm
 
 
