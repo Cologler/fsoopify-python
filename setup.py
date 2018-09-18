@@ -35,11 +35,5 @@ setup(
     include_package_data = True,
     install_requires = [],
     zip_safe = False,
-    entry_points = {},
-    tests_require=[
-        'pytest',
-        'json5',
-        'pyyaml',
-        'toml'
-    ]
+    entry_points = {}
 )
