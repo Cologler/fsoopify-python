@@ -57,8 +57,6 @@ class NodeInfo:
         parent_path = self.path.dirname
         if self._path.is_abspath():
             parent_path = self.path.dirname
-            if parent_path == self.path:
-                return None
         else:
             if parent_path == '':
                 if self._path == os.path.curdir:

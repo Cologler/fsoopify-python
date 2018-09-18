@@ -94,10 +94,15 @@ class Path(PathComponent):
         return NotImplemented
 
     def __ensure_dirname_attr(self):
-        if self._dirname is None:
+        if self._name is None:
             dn, fn = os.path.split(self)
-            self._dirname = Path(dn)
-            self._name = Name(fn)
+            # since `os.path.split(root)` return `(root, '')`
+            if fn:
+                self._dirname = Path(dn)
+                self._name = Name(fn)
+            else:
+                self._dirname = Path('')
+                self._name = Name(dn)
 
     @property
     def dirname(self):

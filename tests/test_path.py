@@ -66,10 +66,14 @@ def test_path_dirname():
     path_str, path = get_path_from_argv_0()
     assert path.dirname == os.path.dirname(path_str)
 
-    # since `os.path.split('c:')` return `('c:', '')`:
-    top_dir = Path('c:')
-    assert top_dir.dirname == 'c:'
-    assert top_dir.name == ''
+def test_path_dirname_root():
+    if sys.platform == 'win32':
+        top_dir = Path('c:')
+        assert top_dir.name == 'c:'
+    else: # posix
+        top_dir = Path('/')
+        assert top_dir.name == '/'
+    assert top_dir.dirname == ''
 
 def test_path_name():
     path_str, path = get_path_from_argv_0()

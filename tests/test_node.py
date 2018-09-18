@@ -8,6 +8,8 @@
 import sys
 import os
 
+import pytest
+
 from fsoopify import NodeInfo, FileInfo, DirectoryInfo
 
 # create by static methods:
@@ -32,12 +34,6 @@ def test_node_get_parent():
     assert isinstance(parent_dir, DirectoryInfo)
     assert parent_dir.path == os.path.dirname(sys.argv[0])
 
-    # parent of root is None
-    top_dir = DirectoryInfo('c:')
-    assert top_dir.get_parent() is None
-    top_dir = DirectoryInfo('c:\\')
-    assert top_dir.get_parent() is None
-
     # parent of relative
     some_node = DirectoryInfo('a\\b')
     some_node = some_node.get_parent()
@@ -50,3 +46,17 @@ def test_node_get_parent():
     assert some_node.path == '..\\..'
     some_node = some_node.get_parent()
     assert some_node.path == '..\\..\\..'
+
+@pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
+def test_node_get_parent_win32():
+    # parent of root is None
+    top_dir = DirectoryInfo('c:')
+    assert top_dir.get_parent() is None
+    top_dir = DirectoryInfo('c:\\')
+    assert top_dir.get_parent() is None
+
+@pytest.mark.skipif(sys.platform == 'win32', reason="does not run on windows")
+def test_node_get_parent_posix():
+    # parent of root is None
+    top_dir = DirectoryInfo('/')
+    assert top_dir.get_parent() is None
