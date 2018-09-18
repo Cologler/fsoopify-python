@@ -14,7 +14,7 @@ from fsoopify import (
 )
 
 def test_dir_node_type():
-    assert FileInfo('.').node_type is NodeType.dir
+    assert FileInfo('.').node_type is NodeType.file
 
 test_data_dir = DirectoryInfo('test_data_dir')
 test_data_dir.ensure_created()
