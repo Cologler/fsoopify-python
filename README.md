@@ -13,7 +13,7 @@ pip install fsoopify
 ``` py
 import fsoopify
 
-[file|folder] = fsoopify.NodeInfo.from_path(...)
+[file|directory] = fsoopify.NodeInfo.from_path(...)
 
 # api for both file and directory
 file.rename()
@@ -33,10 +33,10 @@ file.read_bytes() and file.write_bytes()
 file.copy_to()
 file.load() and file.dump() # I love this API
 
-# api for api
-folder.create() and folder.ensure_created()
-folder.create_file()
-folder.iter_items()
-folder.list_items()
-folder.get_fileinfo() and folder.get_dirinfo()
+# api for directory
+directory.create() and folder.ensure_created()
+directory.create_file()
+directory.iter_items()
+directory.list_items()
+directory.get_fileinfo() and folder.get_dirinfo()
 ```
