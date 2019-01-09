@@ -12,6 +12,8 @@ import pytest
 
 from fsoopify import Path
 
+NT = sys.platform == 'win32'
+
 def get_path_from_argv_0():
     path_str = sys.argv[0]
     path = Path(path_str)
@@ -41,23 +43,33 @@ def test_path_equals_without_case():
     assert path == os.path.normcase(path_str.lower())
 
 def test_path_normalcase():
-    path_str, path = get_path_from_argv_0()
-    assert path.normalcase == os.path.normcase(path_str)
+    _, path = get_path_from_argv_0()
+    assert isinstance(path.normalcase, str)
 
-def test_path_abspath():
+def test_is_abspath():
+    _, path = get_path_from_argv_0()
+    assert path.is_abspath()
+
+    assert not Path('s').is_abspath()
+
+    # only on windows
+    assert Path('c:').is_abspath() == NT
+    assert Path('c:\\').is_abspath() == NT
+    assert Path('c://').is_abspath() == NT
+
+def test_abspath():
     path_str, path = get_path_from_argv_0()
-    assert path.is_abspath() == os.path.isabs(path_str)
     assert path.get_abspath().is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
 
     path_str = 's'
     path = Path(path_str)
-    assert path.is_abspath() == os.path.isabs(path_str)
     assert path.get_abspath().is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
 
+
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
-def test_abspath_root_win32():
+def test_abspath_with_root_on_win32():
     path_str = 'c:\\'
     path = Path(path_str)
     assert os.path.isabs(path_str)
@@ -72,9 +84,50 @@ def test_abspath_root_win32():
     assert path.is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
 
-def test_path_dirname():
+def test_dirname_with_abspath():
     path_str, path = get_path_from_argv_0()
     assert path.dirname == os.path.dirname(path_str)
+
+    if NT:
+        path = Path('a:\\b\\c\\d')
+        dirname = path.dirname
+        assert str(dirname) == 'a:\\b\\c'
+        dirname = dirname.dirname
+        assert str(dirname) == 'a:\\b'
+        dirname = dirname.dirname
+        assert str(dirname) == 'a:\\'
+    else:
+        # TODO: need test cases
+        pass
+
+def test_dirname_with_relpath():
+    path_str = 's'
+    path = Path(path_str)
+
+    dirname, name = path.dirname, path.name
+    assert str(dirname) == '.'
+    assert str(name) == 's'
+    dirname, name = dirname.dirname, dirname.name
+    assert str(dirname) == '..'
+    assert str(name) == '.'
+    dirname, name = dirname.dirname, dirname.name
+    assert str(dirname) == '..\\..'
+    assert str(name) == '..'
+    dirname, name = dirname.dirname, dirname.name
+    assert str(dirname) == '..\\..\\..'
+    assert str(name) == '..'
+    dirname, name = dirname.dirname, dirname.name
+    assert str(dirname) == '..\\..\\..\\..'
+    assert str(name) == '..'
+
+def test_name_with_abspath():
+    path_str, path = get_path_from_argv_0()
+    assert path.name == os.path.basename(path_str)
+
+def test_name_with_relpath():
+    path_str = 's'
+    path = Path(path_str)
+    assert path.name == path_str
 
 def test_path_dirname_root():
     if sys.platform == 'win32':
@@ -83,11 +136,7 @@ def test_path_dirname_root():
     else: # posix
         top_dir = Path('/')
         assert top_dir.name == '/'
-    assert top_dir.dirname == ''
-
-def test_path_name():
-    path_str, path = get_path_from_argv_0()
-    assert path.name == os.path.split(path_str)[1]
+    assert top_dir.dirname is None
 
 def test_path_name_pure_name():
     path_str, path = get_path_from_argv_0()

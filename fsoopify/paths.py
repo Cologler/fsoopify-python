@@ -98,34 +98,63 @@ class Path(PathComponent):
         self._name = None
         # abs attrs
         self._is_abspath = None
-        self._abspath = None
 
     def __truediv__(self, right):
         if isinstance(right, str):
             return Path(os.path.join(self, right))
         return NotImplemented
 
-    def __ensure_dirname_attr(self):
+    def __init_dirname_attr(self):
         if self._name is None:
-            dn, fn = os.path.split(self)
-            # since `os.path.split(root)` return `(root, '')`
-            if fn:
-                self._dirname = Path(dn)
-                self._name = Name(fn)
+            dn, fn = os.path.split(str(self))
+            if self.is_abspath():
+                # abs: `os.path.split('c:')` => `('c:', '')`
+                if dn and fn:
+                    self._dirname = Path(dn)
+                    self._name = Name(fn)
+                else:
+                    self._dirname = None
+                    self._name = Name(dn)
+
             else:
-                self._dirname = Path('')
-                self._name = Name(dn)
+                # rel: `os.path.split('c')`  => `('', 'c')`
+                # rel: '.' => ('', '.')
+                # rel: '..' => ('', '..')
+                # rel: '..\\..' => ('..', '..')
+                if dn and fn:
+                    if dn == os.path.curdir:
+                        self._dirname = Path(dn)
+                    elif fn == os.path.pardir:
+                        self._dirname = Path(os.path.join(os.path.pardir, str(self)))
+                    else:
+                        self._dirname = Path(dn)
+                    self._name = Name(fn)
+                elif fn:
+                    # rel path
+                    if str(fn) == os.path.curdir:
+                        self._dirname = Path(os.path.pardir)
+                    elif str(fn) == os.path.pardir:
+                        self._dirname = Path(os.path.join(os.path.pardir, os.path.pardir))
+                    else:
+                        self._dirname = Path(os.path.curdir)
+                    self._name = Name(fn)
+                else:
+                    self._dirname = None
+                    self._name = Name(dn)
 
     @property
     def dirname(self):
-        ''' get directory component from path. '''
-        self.__ensure_dirname_attr()
+        '''
+        get directory component from path.
+        return `None` if no parent.
+        '''
+        self.__init_dirname_attr()
         return self._dirname
 
     @property
     def name(self) -> Name:
         ''' get name component from path. '''
-        self.__ensure_dirname_attr()
+        self.__init_dirname_attr()
         return self._name
 
     @property
@@ -155,26 +184,22 @@ class Path(PathComponent):
         return Path(os.path.join(self.dirname, self.name.replace_ext(val)))
 
     if NT:
-        def __ensure_abspath_attr(self):
-            if self._is_abspath is None:
-                self._is_abspath = bool(os.path.splitdrive(self)[0])
-                if os.path.isabs(self):
-                    self._abspath = self
-                else:
-                    self._abspath = Path(os.path.abspath(self))
-    else:
-        def __ensure_abspath_attr(self):
+        def __init_is_abspath(self):
             if self._is_abspath is None:
                 self._is_abspath = os.path.isabs(self)
-                if self._is_abspath:
-                    self._abspath = self
-                else:
-                    self._abspath = Path(os.path.abspath(self))
+                if not self._is_abspath:
+                    # path like 'c:' should be abspath
+                    self._is_abspath = bool(os.path.splitdrive(self)[0])
+
+    else:
+        def __init_is_abspath(self):
+            if self._is_abspath is None:
+                self._is_abspath = os.path.isabs(self)
 
     def get_abspath(self):
-        self.__ensure_abspath_attr()
-        return self._abspath
+        self.__init_is_abspath()
+        return self if self._is_abspath else Path(os.path.abspath(self))
 
     def is_abspath(self):
-        self.__ensure_abspath_attr()
+        self.__init_is_abspath()
         return self._is_abspath
