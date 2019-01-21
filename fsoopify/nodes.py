@@ -55,18 +55,6 @@ class NodeInfo:
         return `None` if self is top.
         '''
         parent_path = self.path.dirname
-        if self._path.is_abspath():
-            parent_path = self.path.dirname
-        else:
-            if parent_path == '':
-                if self._path == os.path.curdir:
-                    parent_path = os.path.pardir
-                elif self._path == os.path.pardir:
-                    parent_path = os.path.join(os.path.pardir, self._path)
-                else:
-                    parent_path = os.path.curdir
-            elif parent_path == '..':
-                parent_path = os.path.join(os.path.pardir, self._path)
         if parent_path:
             return DirectoryInfo(parent_path)
 
