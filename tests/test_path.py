@@ -111,13 +111,13 @@ def test_dirname_with_relpath():
     assert str(dirname) == '..'
     assert str(name) == '.'
     dirname, name = dirname.dirname, dirname.name
-    assert str(dirname) == '..\\..'
+    assert str(dirname) == os.path.join('..', '..')
     assert str(name) == '..'
     dirname, name = dirname.dirname, dirname.name
-    assert str(dirname) == '..\\..\\..'
+    assert str(dirname) == os.path.join('..', '..', '..')
     assert str(name) == '..'
     dirname, name = dirname.dirname, dirname.name
-    assert str(dirname) == '..\\..\\..\\..'
+    assert str(dirname) == os.path.join('..', '..', '..', '..')
     assert str(name) == '..'
 
 def test_name_with_abspath():
