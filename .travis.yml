@@ -11,8 +11,9 @@ script:
   - python -m pytest
 deploy:
   provider: pypi
-  user: "conanvista"
-  password:
-    secure: LYoL6SrcvJMNxdzFn/NeVV51owXLtewEVplcAXxRSDnyDEifjtxeloX4hkiFFziCfRocW/QcVLx0ksUwPFkTUAwGOL31MyLMX9kXTyp4PUwxR9psC53jBCT7sEMgq3sGrCtVg9f0wCyyQEK+V6KGF4sJ6rUiinhaDhhAOKazRm8p0pdOcM9SsGatGbQNQay7O19a7+qA92Hnh0nPch5KWyB7otsvN3Msq4UFWYQYgLL35g9KwLkiL56nd1q84D9AnG46ayh3nikU/EmzTWwvR+7iMKYk9VSTLmiA6tTdkjbjpAEDwkR+Ikmm9ebsK/0KnatKWhM3hsgNuYS+hXYTj8Qx5yqn9bzBlZgXJSujk8YRvvc7IdGCfeYc2B1wBEH30iYLyM7XZq7h8Xy2ITjcQr8czDFQakcKIwf5d8Oqwb4PY/VtzOYNjg7jI57k6E20LIj+Yr1II+6MuvHW1JrFSU/brPg9AWVmYQLQxO772hnriI0zeCdcDSUA/xAyIcjl4X0aYmGLVOVZ+MFqbBQQFTNEpCnFP+5tt+X4J7Hqs7oZtWEURbw6CwubkA2Wszslfa4jHC34xEbr9sIk/Y081Pyh2R3nBKnt0+yrVyYkswf7mmgH5BlPSMejPvsT1kfz1HzWes7GY/f7z7xi8iflif8D1Er97/FVjjbJMv8Dooc=
+  user: $PYPI_USER
+  password: $PYPI_PW
+  distributions: "sdist bdist_wheel"
+  skip_existing: true
   on:
     tags: true
