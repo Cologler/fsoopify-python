@@ -9,7 +9,34 @@
 import os
 import sys
 
+from .utils import gettercache
+
 NT = sys.platform == 'win32'
+
+if NT:
+    def _is_abspath(path: str):
+        if os.path.isabs(path):
+            return True
+        rp = path.rpartition(':')
+        if rp[0]:
+            # path like 'c:' should be abspath
+            return True
+        return False
+
+    def _get_normpath(path: str):
+        val = str(path) # avoid recursion
+        if val.endswith(':'):
+            val += os.path.sep
+        return os.path.normpath(os.path.normcase(val))
+
+else:
+    def _is_abspath(path: str):
+        return os.path.isabs(path)
+
+    def _get_normpath(path: str):
+        val = str(path) # avoid recursion
+        return os.path.normpath(os.path.normcase(val))
+
 
 class PathComponent(str):
     def __init__(self, *args):
@@ -18,37 +45,23 @@ class PathComponent(str):
     def __repr__(self):
         return '{}(\'{}\')'.format(type(self).__name__, self)
 
-    if NT:
-        @staticmethod
-        def _get_normpath(path: str):
-            val = str(path) # avoid recursion
-            if val.endswith(':'):
-                val += os.path.sep
-            return os.path.normpath(os.path.normcase(val))
-    else:
-        @staticmethod
-        def _get_normpath(path: str):
-            val = str(path) # avoid recursion
-            return os.path.normpath(os.path.normcase(val))
-
     def __eq__(self, other):
         if isinstance(other, PathComponent):
             return self.normalcase == other.normalcase
         if isinstance(other, str):
-            return self.normalcase == self._get_normpath(other)
-        return NotImplemented
+            return self.normalcase == _get_normpath(other)
+        return False
 
     def __hash__(self):
         return hash(self.normalcase)
 
     @property
+    @gettercache
     def normalcase(self):
         '''
         get normcase path which create by `os.path.normcase()`.
         '''
-        if self._norm is None:
-            self._norm = self._get_normpath(self)
-        return self._norm
+        return _get_normpath(self)
 
 
 class Name(PathComponent):
@@ -91,56 +104,36 @@ class Name(PathComponent):
 
 
 class Path(PathComponent):
+    def __new__(cls, value):
+        if not isinstance(value, str):
+            raise TypeError
+        if cls is Path:
+            if _is_abspath(value):
+                cls = _AbsPath
+            else:
+                cls = _RelPath
+        path = str.__new__(cls, value)
+        return path
+
     def __init__(self, val):
         super().__init__(val)
         # sub attrs
         self._dirname = None
         self._name = None
-        # abs attrs
-        self._is_abspath = None
 
-    def __truediv__(self, right):
-        if isinstance(right, str):
-            return Path(os.path.join(self, right))
-        return NotImplemented
+    def __repr__(self):
+        return 'Path(\'{}\')'.format(self)
 
-    def __init_dirname_attr(self):
-        if self._name is None:
-            dn, fn = os.path.split(str(self))
-            if self.is_abspath():
-                # abs: `os.path.split('c:')` => `('c:', '')`
-                if dn and fn:
-                    self._dirname = Path(dn)
-                    self._name = Name(fn)
-                else:
-                    self._dirname = None
-                    self._name = Name(dn)
+    def __truediv__(self, right: str):
+        if not isinstance(right, str):
+            raise TypeError
 
-            else:
-                # rel: `os.path.split('c')`  => `('', 'c')`
-                # rel: '.' => ('', '.')
-                # rel: '..' => ('', '..')
-                # rel: '..\\..' => ('..', '..')
-                if dn and fn:
-                    if dn == os.path.curdir:
-                        self._dirname = Path(dn)
-                    elif fn == os.path.pardir:
-                        self._dirname = Path(os.path.join(os.path.pardir, str(self)))
-                    else:
-                        self._dirname = Path(dn)
-                    self._name = Name(fn)
-                elif fn:
-                    # rel path
-                    if str(fn) == os.path.curdir:
-                        self._dirname = Path(os.path.pardir)
-                    elif str(fn) == os.path.pardir:
-                        self._dirname = Path(os.path.join(os.path.pardir, os.path.pardir))
-                    else:
-                        self._dirname = Path(os.path.curdir)
-                    self._name = Name(fn)
-                else:
-                    self._dirname = None
-                    self._name = Name(dn)
+        path = type(self)(os.path.join(self, right))
+        dn, fn = os.path.split(right)
+        if not dn:
+            path._dirname = self
+            path._name = Name(right)
+        return path
 
     @property
     def dirname(self):
@@ -148,13 +141,13 @@ class Path(PathComponent):
         get directory component from path.
         return `None` if no parent.
         '''
-        self.__init_dirname_attr()
+        self._init_dirname_attr()
         return self._dirname
 
     @property
     def name(self) -> Name:
         ''' get name component from path. '''
-        self.__init_dirname_attr()
+        self._init_dirname_attr()
         return self._name
 
     @property
@@ -183,23 +176,78 @@ class Path(PathComponent):
     def replace_ext(self, val):
         return Path(os.path.join(self.dirname, self.name.replace_ext(val)))
 
-    if NT:
-        def __init_is_abspath(self):
-            if self._is_abspath is None:
-                self._is_abspath = os.path.isabs(self)
-                if not self._is_abspath:
-                    # path like 'c:' should be abspath
-                    self._is_abspath = bool(os.path.splitdrive(self)[0])
-
-    else:
-        def __init_is_abspath(self):
-            if self._is_abspath is None:
-                self._is_abspath = os.path.isabs(self)
-
-    def get_abspath(self):
-        self.__init_is_abspath()
-        return self if self._is_abspath else Path(os.path.abspath(self))
+    def _init_dirname_attr(self):
+        raise NotImplementedError
 
     def is_abspath(self):
-        self.__init_is_abspath()
-        return self._is_abspath
+        raise NotImplementedError
+
+    def get_abspath(self):
+        raise NotImplementedError
+
+
+class _AbsPath(Path):
+    def _init_dirname_attr(self):
+        if self._name is not None:
+            return
+
+        dn, fn = os.path.split(str(self))
+
+        # `os.path.split('c:')` => `('c:', '')`
+        if dn and fn:
+            self._dirname = Path(dn)
+            self._name = Name(fn)
+        else:
+            self._dirname = None
+            self._name = Name(dn)
+
+    def is_abspath(self):
+        return True
+
+    def get_abspath(self):
+        return self
+
+
+class _RelPath(Path):
+
+    def _init_dirname_attr(self):
+        if self._name is not None:
+            return
+
+        path_cls = type(self)
+        dn, fn = os.path.split(str(self))
+
+        if dn and fn:
+            if dn == os.path.curdir:
+                self._dirname = path_cls(dn)
+            elif fn == os.path.pardir:
+                # '..\\..' => ('..', '..')
+                self._dirname = path_cls(os.path.join(os.path.pardir, str(self)))
+            else:
+                self._dirname = path_cls(dn)
+            self._name = Name(fn)
+
+        elif fn:
+            if str(fn) == os.path.curdir:
+                # '.' => ('', '.')
+                self._dirname = path_cls(os.path.pardir)
+
+            elif str(fn) == os.path.pardir:
+                # '..' => ('', '..')
+                self._dirname = path_cls(os.path.join(os.path.pardir, os.path.pardir))
+
+            else:
+                # `os.path.split('c')`  => `('', 'c')`
+                self._dirname = path_cls(os.path.curdir)
+
+            self._name = Name(fn)
+
+        else:
+            self._dirname = None
+            self._name = Name(dn)
+
+    def is_abspath(self):
+        return False
+
+    def get_abspath(self):
+        return _AbsPath(os.path.abspath(self))

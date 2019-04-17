@@ -84,9 +84,10 @@ def test_abspath_with_root_on_win32():
     assert path.is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
 
-def test_dirname_with_abspath():
+def test_abspath_dirname_and_name():
     path_str, path = get_path_from_argv_0()
     assert path.dirname == os.path.dirname(path_str)
+    assert path.name == os.path.basename(path_str)
 
     if NT:
         path = Path('a:\\b\\c\\d')
@@ -100,7 +101,7 @@ def test_dirname_with_abspath():
         # TODO: need test cases
         pass
 
-def test_dirname_with_relpath():
+def test_relpath_dirname_and_name():
     path_str = 's'
     path = Path(path_str)
 
@@ -119,15 +120,6 @@ def test_dirname_with_relpath():
     dirname, name = dirname.dirname, dirname.name
     assert str(dirname) == os.path.join('..', '..', '..', '..')
     assert str(name) == '..'
-
-def test_name_with_abspath():
-    path_str, path = get_path_from_argv_0()
-    assert path.name == os.path.basename(path_str)
-
-def test_name_with_relpath():
-    path_str = 's'
-    path = Path(path_str)
-    assert path.name == path_str
 
 def test_path_dirname_root():
     if sys.platform == 'win32':
