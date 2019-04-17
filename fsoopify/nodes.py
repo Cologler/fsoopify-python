@@ -8,7 +8,7 @@
 
 import sys
 import os
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from enum import Enum
 
 from .paths import Path
@@ -20,11 +20,12 @@ class NodeType(Enum):
     dir = 2
 
 
-class NodeInfo:
+class NodeInfo(ABC):
     ''' the abstract base class for file system node. '''
 
     def __init__(self, path):
-        self._path: Path = Path(path)
+        # path alwasys be abs
+        self._path: Path = Path(path).get_abspath()
 
     def __str__(self):
         return str(self._path)

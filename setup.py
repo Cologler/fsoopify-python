@@ -9,7 +9,7 @@
 import os
 from setuptools import setup, find_packages
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 DESCRIPTION = ''
 
 long_description = None
@@ -24,10 +24,11 @@ setup(
     name = 'fsoopify',
     version = VERSION,
     description = DESCRIPTION,
-    long_description = long_description or DESCRIPTION,
+    long_description = long_description,
+    long_description_content_type='text/markdown',
     classifiers = [],
     keywords = ['python', 'fs', 'oop', 'oopify', 'filesystem'],
-    author = 'cologler',
+    author = 'Cologler',
     author_email='skyoflw@gmail.com',
     url = 'https://github.com/Cologler/fsoopify-python',
     license = 'MIT',
