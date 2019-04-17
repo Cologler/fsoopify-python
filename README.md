@@ -1,5 +1,9 @@
 # fsoopify
 
+![GitHub](https://img.shields.io/github/license/Cologler/fsoopify-python.svg)
+[![Build Status](https://travis-ci.com/Cologler/fsoopify-python.svg?branch=master)](https://travis-ci.com/Cologler/fsoopify)
+[![PyPI](https://img.shields.io/pypi/v/fsoopify.svg)](https://pypi.org/project/fsoopify/)
+
 Just make file system oopify.
 
 ## install
