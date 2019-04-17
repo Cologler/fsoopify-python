@@ -28,36 +28,12 @@ def test_node_from_argv0():
     assert isinstance(file_info, FileInfo)
     assert file_info.path == sys.argv[0]
 
-def test_node_get_parent_abs():
+def test_node_get_parent():
     # parent of abs
     file_info = NodeInfo.from_argv0()
     parent_dir = file_info.get_parent()
     assert isinstance(parent_dir, DirectoryInfo)
     assert parent_dir.path == os.path.dirname(sys.argv[0])
-
-def test_node_get_parent_relative():
-    some_node = DirectoryInfo(os.path.join('a', 'b'))
-    some_node = some_node.get_parent()
-    assert some_node.path == 'a'
-    some_node = some_node.get_parent()
-    assert some_node.path == '.'
-    some_node = some_node.get_parent()
-    assert some_node.path == '..'
-    some_node = some_node.get_parent()
-    assert some_node.path == os.path.join('..', '..')
-    some_node = some_node.get_parent()
-    assert some_node.path == os.path.join('..', '..', '..')
-
-def test_node_get_parent_abs_root():
-    # parent of root is None
-    if sys.platform == 'win32':
-        top_dir = DirectoryInfo('c:')
-        assert top_dir.get_parent() is None
-        top_dir = DirectoryInfo('c:\\')
-        assert top_dir.get_parent() is None
-    else: # posix
-        top_dir = DirectoryInfo('/')
-        assert top_dir.get_parent() is None
 
 @pytest.mark.skipif(sys.platform == 'win32', reason="does not run on windows")
 def test_node_get_parent_posix():

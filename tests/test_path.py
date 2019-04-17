@@ -31,8 +31,8 @@ def test_path_equals():
     assert path_str == path
 
     if sys.platform == 'win32':
-        assert Path('c:\\') == Path('c:')
-        assert Path('c:\\') == Path('C:')
+        assert Path('c:\\') == 'c:'
+        assert Path('c:\\') == 'C:'
 
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
 def test_path_equals_without_case():
@@ -97,9 +97,11 @@ def test_abspath_dirname_and_name():
         assert str(dirname) == 'a:\\b'
         dirname = dirname.dirname
         assert str(dirname) == 'a:\\'
+
+        assert Path('C:').dirname is None
+        assert Path('C:\\').dirname is None
     else:
-        # TODO: need test cases
-        pass
+        assert Path('/').dirname is None
 
 def test_relpath_dirname_and_name():
     path_str = 's'

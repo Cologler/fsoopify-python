@@ -24,7 +24,8 @@ class NodeInfo:
     ''' the abstract base class for file system node. '''
 
     def __init__(self, path):
-        self._path: Path = Path(path)
+        # path alwasys be abs
+        self._path: Path = Path(path).get_abspath()
 
     def __str__(self):
         return str(self._path)
