@@ -46,8 +46,8 @@ class NodeInfo(ABC):
         '''
         if not isinstance(dest_path, str):
             raise TypeError
-        os.rename(self._path, dest_path)
-        self._path = Path(dest_path)
+        os.rename(self._path, new_path)
+        self._path = Path(dest_path).get_abspath()
 
     def get_parent(self):
         '''
