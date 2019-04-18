@@ -29,6 +29,13 @@ if NT:
             val += os.path.sep
         return os.path.normpath(os.path.normcase(val))
 
+    def _join(path, *others):
+        if not isinstance(path, str):
+            raise TypeError
+        if path.endswith(':'):
+            path += os.path.sep
+        return os.path.join(path, *others)
+
 else:
     def _is_abspath(path: str):
         return os.path.isabs(path)
@@ -36,6 +43,9 @@ else:
     def _get_normpath(path: str):
         val = str(path) # avoid recursion
         return os.path.normpath(os.path.normcase(val))
+
+    def _join(path, *others):
+        return os.path.join(path, *others)
 
 
 class PathComponent(str):
@@ -104,6 +114,8 @@ class Name(PathComponent):
 
 
 class Path(PathComponent):
+    join = staticmethod(_join)
+
     def __new__(cls, value):
         if not isinstance(value, str):
             raise TypeError
@@ -224,6 +236,16 @@ class Path(PathComponent):
         from .nodes import DirectoryInfo
         return DirectoryInfo(self)
 
+    def get_parent(self, level: int = 1):
+        if not isinstance(level, int):
+            raise TypeError
+        if level < 1:
+            raise ValueError('level must large then 1')
+        return self._get_parent(level)
+
+    def _get_parent(self, level: int):
+        raise NotImplementedError
+
     def _init_dirname_attr(self):
         raise NotImplementedError
 
@@ -235,6 +257,17 @@ class Path(PathComponent):
 
 
 class _AbsPath(Path):
+
+    def _get_parent(self, level: int):
+        parts = self.replace('\\', '/').split('/')
+        if len(parts) < level + 1:
+            raise ValueError(f'for path <{self}>, max level is {len(parts) - 1}')
+        new_parts = parts[:-level]
+        if not new_parts:
+            breakpoint()
+        parent_path = self.join(*new_parts)
+        return type(self)(parent_path)
+
     def _init_dirname_attr(self):
         if self._name is not None:
             return
@@ -257,6 +290,25 @@ class _AbsPath(Path):
 
 
 class _RelPath(Path):
+
+    def _get_parent(self, level: int):
+        path_cls = type(self)
+        parts = self.replace('\\', '/').split('/')
+        if len(parts) > level:
+            new_parts = parts[:-level]
+            parent_path = self.join(*new_parts)
+            return path_cls(parent_path)
+        level -= len(parts)
+        if parts[0] == os.path.curdir:
+            return path_cls(self.join(*([os.path.pardir] * (level+1))))
+        elif parts[0] == os.path.pardir:
+            return path_cls(self.join(*([os.path.pardir] * (level+2))))
+        else:
+            if level == 0:
+                return path_cls(os.path.curdir)
+            else:
+                return path_cls(self.join(*([os.path.pardir] * level)))
+
 
     def _init_dirname_attr(self):
         if self._name is not None:

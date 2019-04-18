@@ -67,7 +67,6 @@ def test_abspath():
     assert path.get_abspath().is_abspath()
     assert path.get_abspath() == os.path.abspath(path_str)
 
-
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
 def test_abspath_with_root_on_win32():
     path_str = 'c:\\'
