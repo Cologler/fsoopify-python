@@ -191,6 +191,14 @@ class Path(PathComponent):
     def replace_ext(self, val):
         return Path(os.path.join(self.dirname, self.name.replace_ext(val)))
 
+    def as_file(self):
+        from .nodes import FileInfo
+        return FileInfo(self)
+
+    def as_dir(self):
+        from .nodes import DirectoryInfo
+        return DirectoryInfo(self)
+
     def _init_dirname_attr(self):
         raise NotImplementedError
 
