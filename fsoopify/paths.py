@@ -123,18 +123,43 @@ class Path(PathComponent):
 
     @staticmethod
     def from_cwd():
-        '''create `Path` from `os.getcwd()`'''
+        '''return a `Path` from `os.getcwd()`'''
         return Path(os.getcwd())
 
     @staticmethod
     def from_home():
-        '''create `Path` from `os.path.expanduser("~")`'''
+        '''return a `Path` from `os.path.expanduser("~")`'''
         return Path(os.path.expanduser("~"))
 
     @staticmethod
     def from_argv(index=0):
-        '''create `Path` from `sys.argv`'''
+        '''return a `Path` from `sys.argv`'''
         return Path(sys.argv[index])
+
+    @staticmethod
+    def from_caller_file():
+        '''return a `Path` from the path of caller file'''
+        import inspect
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        filename = calframe[1].filename
+        if not os.path.isfile(filename):
+            raise RuntimeError('caller is not a file')
+        return Path(filename)
+
+    @staticmethod
+    def from_caller_module_root():
+        '''return a `Path` from module root which include the caller'''
+        import inspect
+        all_stack = list(inspect.stack())
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        module = inspect.getmodule(calframe[1].frame)
+        if not module:
+            raise RuntimeError('caller is not a module')
+        root_module_name = module.__name__.partition('.')[0]
+        fullpath = sys.modules[root_module_name].__file__
+        return Path(fullpath)
 
     def __repr__(self):
         return 'Path(\'{}\')'.format(self)

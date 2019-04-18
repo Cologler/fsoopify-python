@@ -139,3 +139,23 @@ def test_path_name_pure_name():
 def test_path_name_ext():
     path_str, path = get_path_from_argv_0()
     assert path.name.ext == os.path.splitext(os.path.split(path_str)[1])[1]
+
+def test_path_from_caller_file():
+    path = Path.from_caller_file()
+    assert path == os.path.join(os.path.abspath('.'), __file__)
+
+def test_path_from_caller_module_root():
+    import outer_module_file
+    assert outer_module_file.module_root == os.path.join(
+        os.path.abspath('.'), 'tests', 'outer_module_file.py'
+    )
+
+    import outer_module_dir
+    assert outer_module_dir.module_root == os.path.join(
+        os.path.abspath('.'), 'tests', 'outer_module_dir', '__init__.py'
+    )
+
+    import outer_module_dir.mod
+    assert outer_module_dir.mod.module_root == os.path.join(
+        os.path.abspath('.'), 'tests', 'outer_module_dir', '__init__.py'
+    )
