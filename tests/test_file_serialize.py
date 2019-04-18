@@ -42,6 +42,6 @@ def test_dump_load_with_ext():
 
 def test_pipfile():
     import pipfile
-    assert FileInfo('pipfile').load() == pipfile.load('pipfile').data
+    assert FileInfo('Pipfile').load() == pipfile.load('Pipfile').data
     with raises(NotImplementedError):
-        FileInfo('pipfile').dump({})
+        FileInfo('Pipfile').dump({})
