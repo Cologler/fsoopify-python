@@ -11,6 +11,7 @@ EXT2FORMAT_MAP = {
     '.json' : 'json',
     '.json5': 'json5',
     '.yaml' : 'yaml',
+    '.yml' : 'yaml',
     '.toml' : 'toml',
 }
 
