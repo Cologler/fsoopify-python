@@ -121,6 +121,21 @@ class Path(PathComponent):
         self._dirname = None
         self._name = None
 
+    @staticmethod
+    def from_cwd():
+        '''create `Path` from `os.getcwd()`'''
+        return Path(os.getcwd())
+
+    @staticmethod
+    def from_home():
+        '''create `Path` from `os.path.expanduser("~")`'''
+        return Path(os.path.expanduser("~"))
+
+    @staticmethod
+    def from_argv(index=0):
+        '''create `Path` from `sys.argv`'''
+        return Path(sys.argv[index])
+
     def __repr__(self):
         return 'Path(\'{}\')'.format(self)
 
