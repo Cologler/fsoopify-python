@@ -293,6 +293,18 @@ class DirectoryInfo(NodeInfo):
         '''
         return list(self.iter_items(depth))
 
+    def has_file(self, name: str):
+        '''
+        check whether this directory contains the file.
+        '''
+        return os.path.isfile(self._path / name)
+
+    def has_directory(self, name: str):
+        '''
+        check whether this directory contains the directory.
+        '''
+        return os.path.isdir(self._path / name)
+
     def get_fileinfo(self, name: str):
         '''
         get a `FileInfo` for a file (without create actual file).
