@@ -49,13 +49,13 @@ class NodeInfo(ABC):
         os.rename(self._path, dest_path)
         self._path = Path(dest_path).get_abspath()
 
-    def get_parent(self):
+    def get_parent(self, level=1):
         '''
         get parent dir as a `DirectoryInfo`.
 
         return `None` if self is top.
         '''
-        parent_path = self.path.dirname
+        parent_path = self.path.get_parent(level)
         if parent_path:
             return DirectoryInfo(parent_path)
 
