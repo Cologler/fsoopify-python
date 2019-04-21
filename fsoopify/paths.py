@@ -263,8 +263,6 @@ class _AbsPath(Path):
         if len(parts) < level + 1:
             raise ValueError(f'for path <{self}>, max level is {len(parts) - 1}')
         new_parts = parts[:-level]
-        if not new_parts:
-            breakpoint()
         parent_path = self.join(*new_parts)
         return type(self)(parent_path)
 
