@@ -29,6 +29,13 @@ if NT:
             val += os.path.sep
         return os.path.normpath(os.path.normcase(val))
 
+    def _join(path, *others):
+        if not isinstance(path, str):
+            raise TypeError
+        if path.endswith(':'):
+            path += os.path.sep
+        return os.path.join(path, *others)
+
 else:
     def _is_abspath(path: str):
         return os.path.isabs(path)
@@ -36,6 +43,9 @@ else:
     def _get_normpath(path: str):
         val = str(path) # avoid recursion
         return os.path.normpath(os.path.normcase(val))
+
+    def _join(path, *others):
+        return os.path.join(path, *others)
 
 
 class PathComponent(str):
@@ -104,6 +114,8 @@ class Name(PathComponent):
 
 
 class Path(PathComponent):
+    join = staticmethod(_join)
+
     def __new__(cls, value):
         if not isinstance(value, str):
             raise TypeError
@@ -123,18 +135,43 @@ class Path(PathComponent):
 
     @staticmethod
     def from_cwd():
-        '''create `Path` from `os.getcwd()`'''
+        '''return a `Path` from `os.getcwd()`'''
         return Path(os.getcwd())
 
     @staticmethod
     def from_home():
-        '''create `Path` from `os.path.expanduser("~")`'''
+        '''return a `Path` from `os.path.expanduser("~")`'''
         return Path(os.path.expanduser("~"))
 
     @staticmethod
     def from_argv(index=0):
-        '''create `Path` from `sys.argv`'''
+        '''return a `Path` from `sys.argv`'''
         return Path(sys.argv[index])
+
+    @staticmethod
+    def from_caller_file():
+        '''return a `Path` from the path of caller file'''
+        import inspect
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        filename = calframe[1].filename
+        if not os.path.isfile(filename):
+            raise RuntimeError('caller is not a file')
+        return Path(filename)
+
+    @staticmethod
+    def from_caller_module_root():
+        '''return a `Path` from module root which include the caller'''
+        import inspect
+        all_stack = list(inspect.stack())
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        module = inspect.getmodule(calframe[1].frame)
+        if not module:
+            raise RuntimeError('caller is not a module')
+        root_module_name = module.__name__.partition('.')[0]
+        fullpath = sys.modules[root_module_name].__file__
+        return Path(fullpath)
 
     def __repr__(self):
         return 'Path(\'{}\')'.format(self)
@@ -191,6 +228,24 @@ class Path(PathComponent):
     def replace_ext(self, val):
         return Path(os.path.join(self.dirname, self.name.replace_ext(val)))
 
+    def as_file(self):
+        from .nodes import FileInfo
+        return FileInfo(self)
+
+    def as_dir(self):
+        from .nodes import DirectoryInfo
+        return DirectoryInfo(self)
+
+    def get_parent(self, level: int = 1):
+        if not isinstance(level, int):
+            raise TypeError
+        if level < 1:
+            raise ValueError('level must large then 1')
+        return self._get_parent(level)
+
+    def _get_parent(self, level: int):
+        raise NotImplementedError
+
     def _init_dirname_attr(self):
         raise NotImplementedError
 
@@ -202,6 +257,17 @@ class Path(PathComponent):
 
 
 class _AbsPath(Path):
+
+    def _get_parent(self, level: int):
+        parts = self.replace('\\', '/').rstrip('/').split('/')
+        if len(parts) <= level:
+            raise ValueError(f'for path <{self}>, max level is {len(parts) - 1}')
+        new_parts = parts[:-level]
+        if not NT and new_parts[0] == '':
+            new_parts[0] = '/'
+        parent_path = self.join(*new_parts)
+        return type(self)(parent_path)
+
     def _init_dirname_attr(self):
         if self._name is not None:
             return
@@ -224,6 +290,25 @@ class _AbsPath(Path):
 
 
 class _RelPath(Path):
+
+    def _get_parent(self, level: int):
+        path_cls = type(self)
+        parts = self.replace('\\', '/').split('/')
+        if len(parts) > level:
+            new_parts = parts[:-level]
+            parent_path = self.join(*new_parts)
+            return path_cls(parent_path)
+        level -= len(parts)
+        if parts[0] == os.path.curdir:
+            return path_cls(self.join(*([os.path.pardir] * (level+1))))
+        elif parts[0] == os.path.pardir:
+            return path_cls(self.join(*([os.path.pardir] * (level+2))))
+        else:
+            if level == 0:
+                return path_cls(os.path.curdir)
+            else:
+                return path_cls(self.join(*([os.path.pardir] * level)))
+
 
     def _init_dirname_attr(self):
         if self._name is not None:

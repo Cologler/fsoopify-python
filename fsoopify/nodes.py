@@ -49,15 +49,18 @@ class NodeInfo(ABC):
         os.rename(self._path, dest_path)
         self._path = Path(dest_path).get_abspath()
 
-    def get_parent(self):
+    def get_parent(self, level=1):
         '''
         get parent dir as a `DirectoryInfo`.
 
         return `None` if self is top.
         '''
-        parent_path = self.path.dirname
-        if parent_path:
-            return DirectoryInfo(parent_path)
+        try:
+            parent_path = self.path.get_parent(level)
+        except ValueError: # abspath cannot get parent
+            return None
+        assert parent_path
+        return DirectoryInfo(parent_path)
 
     @staticmethod
     def from_path(path):
@@ -292,6 +295,18 @@ class DirectoryInfo(NodeInfo):
         get items from directory.
         '''
         return list(self.iter_items(depth))
+
+    def has_file(self, name: str):
+        '''
+        check whether this directory contains the file.
+        '''
+        return os.path.isfile(self._path / name)
+
+    def has_directory(self, name: str):
+        '''
+        check whether this directory contains the directory.
+        '''
+        return os.path.isdir(self._path / name)
 
     def get_fileinfo(self, name: str):
         '''

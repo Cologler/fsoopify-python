@@ -38,9 +38,10 @@ file.copy_to()
 file.load() and file.dump() # I love this API
 
 # api for directory
-directory.create() and folder.ensure_created()
+directory.create() and directory.ensure_created()
 directory.create_file()
 directory.iter_items()
 directory.list_items()
-directory.get_fileinfo() and folder.get_dirinfo()
+directory.get_fileinfo() and directory.get_dirinfo()
+directory.has_file() and directory.has_directory()
 ```
