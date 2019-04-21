@@ -14,6 +14,11 @@ from fsoopify import Path
 
 NT = sys.platform == 'win32'
 
+def test_get_parent():
+    path = Path.from_argv(0)
+    parent = path.get_parent()
+    assert parent == os.path.dirname(sys.argv[0])
+
 @pytest.mark.skipif(not NT, reason="only run on windows")
 def test_get_parent_win32():
     src_path = os.path.join('c:\\', 'd', 'e')
