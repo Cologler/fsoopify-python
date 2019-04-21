@@ -259,7 +259,7 @@ class Path(PathComponent):
 class _AbsPath(Path):
 
     def _get_parent(self, level: int):
-        parts = self.replace('\\', '/').split('/')
+        parts = [x for x in self.replace('\\', '/').split('/') if x]
         if len(parts) < level + 1:
             raise ValueError(f'for path <{self}>, max level is {len(parts) - 1}')
         new_parts = parts[:-level]
