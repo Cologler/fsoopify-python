@@ -269,7 +269,7 @@ class DirectoryInfo(NodeInfo):
     def ensure_created(self):
         ''' ensure the directory was created. '''
         if not self.is_directory():
-            self.create()
+            os.makedirs(self.path)
 
     def iter_items(self, depth: int = 1):
         '''
