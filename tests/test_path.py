@@ -141,7 +141,11 @@ def test_path_name_ext():
 
 def test_path_from_caller_file():
     path = Path.from_caller_file()
-    assert path == os.path.join(os.path.abspath('.'), __file__)
+    assert path == __file__
+
+def test_path_from_caller_dir():
+    path = Path.from_caller_dir()
+    assert path == os.path.dirname(__file__)
 
 def test_path_from_caller_module_root():
     import outer_module_file

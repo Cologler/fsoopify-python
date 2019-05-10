@@ -160,6 +160,17 @@ class Path(PathComponent):
         return Path(filename)
 
     @staticmethod
+    def from_caller_dir():
+        '''return a `Path` from the dirname of caller file'''
+        import inspect
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        filename = calframe[1].filename
+        if not os.path.isfile(filename):
+            raise RuntimeError('caller is not a file')
+        return Path(filename).dirname
+
+    @staticmethod
     def from_caller_module_root():
         '''return a `Path` from module root which include the caller'''
         import inspect
