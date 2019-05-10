@@ -135,22 +135,31 @@ class Path(PathComponent):
 
     @staticmethod
     def from_cwd():
-        '''return a `Path` from `os.getcwd()`'''
+        ''' get `Path` from `os.getcwd()` '''
         return Path(os.getcwd())
 
     @staticmethod
     def from_home():
-        '''return a `Path` from `os.path.expanduser("~")`'''
+        ''' get `Path` from `os.path.expanduser("~")` '''
         return Path(os.path.expanduser("~"))
 
     @staticmethod
     def from_argv(index=0):
-        '''return a `Path` from `sys.argv`'''
+        ''' get `Path` from `sys.argv` by index '''
         return Path(sys.argv[index])
 
     @staticmethod
+    def from_main_file():
+        ''' get `Path` from the path of __main__ file '''
+        try:
+            module = sys.modules['__main__']
+        except KeyError:
+            raise RuntimeError('unable to find `__main__` module')
+        return Path(module.__file__)
+
+    @staticmethod
     def from_caller_file():
-        '''return a `Path` from the path of caller file'''
+        ''' get `Path` from the path of caller file '''
         import inspect
         curframe = inspect.currentframe()
         calframe = inspect.getouterframes(curframe, 2)
@@ -160,19 +169,8 @@ class Path(PathComponent):
         return Path(filename)
 
     @staticmethod
-    def from_caller_dir():
-        '''return a `Path` from the dirname of caller file'''
-        import inspect
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        filename = calframe[1].filename
-        if not os.path.isfile(filename):
-            raise RuntimeError('caller is not a file')
-        return Path(filename).dirname
-
-    @staticmethod
     def from_caller_module_root():
-        '''return a `Path` from module root which include the caller'''
+        ''' get `Path` from module root which include the caller '''
         import inspect
         all_stack = list(inspect.stack())
         curframe = inspect.currentframe()
