@@ -25,7 +25,7 @@ def _assert_root_abspath_unable_get_parent(path: Path):
         path.get_parent()
 
 @pytest.mark.skipif(not NT, reason="only run on windows")
-def test_abspath_get_parent_win32():
+def test_abspath_get_parent_on_win32():
     src_path = os.path.join('c:\\', 'd', 'e')
     path = Path(src_path)
     assert path.get_parent(1) == path.dirname
@@ -39,7 +39,14 @@ def test_abspath_get_parent_win32():
     _assert_root_abspath_unable_get_parent(Path('C:\\'))
 
 @pytest.mark.skipif(NT, reason="only run on unix")
-def test_abspath_get_parent_unix():
+def test_abspath_get_parent_on_unix():
+    src_path = os.path.join('/', 'd', 'e')
+    path = Path(src_path)
+    assert path.get_parent(1) == path.dirname
+    assert path.get_parent(1) == os.path.join('/', 'd')
+    assert path.get_parent(2) == '/'
+    with pytest.raises(ValueError, match='max level is 2'):
+        path.get_parent(3)
 
     # test root:
     _assert_root_abspath_unable_get_parent(Path('/'))
