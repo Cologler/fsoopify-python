@@ -12,8 +12,6 @@ import pytest
 
 from fsoopify import Path
 
-NT = sys.platform == 'win32'
-
 def only_run_on_win(func):
     return pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")(
         func
@@ -83,3 +81,9 @@ def test_abspath_propertye_on_unix():
     # test root:
     root_path = Path('/')
     assert root_path.name == '/'
+
+def test_abspath_join():
+    # join with pardir
+    path = Path.from_argv() / os.path.pardir
+    assert path.is_abspath()
+    assert path == os.path.dirname(sys.argv[0])

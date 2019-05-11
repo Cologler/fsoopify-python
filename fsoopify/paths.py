@@ -189,9 +189,11 @@ class Path(PathComponent):
         if not isinstance(right, str):
             raise TypeError
 
-        path = type(self)(os.path.join(self, right))
+        path = type(self)(self.join(self, right))
         dn, fn = os.path.split(right)
         if not dn:
+            # if right did not contains sep,
+            # fill attr on path to avoid make new one
             path._dirname = self
             path._name = Name(right)
         return path
