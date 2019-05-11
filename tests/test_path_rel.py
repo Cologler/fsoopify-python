@@ -14,7 +14,7 @@ from fsoopify import Path
 
 NT = sys.platform == 'win32'
 
-def test_get_parent_when_root_is_dir():
+def test_relpath_get_parent_when_root_is_dir():
     src_path = os.path.join('a', 'b', 'c')
     path = Path(src_path)
     assert path.get_parent(1) == path.dirname
@@ -24,7 +24,7 @@ def test_get_parent_when_root_is_dir():
     for i in range(1, 10):
         assert path.get_parent(3+i) == os.path.join(*([os.path.pardir] * i))
 
-def test_get_parent_when_root_is_curdir():
+def test_relpath_get_parent_when_root_is_curdir():
     src_path = os.path.join(os.path.curdir, 'a', 'b', 'c')
     path = Path(src_path)
     assert path.get_parent(1) == path.dirname
@@ -34,14 +34,14 @@ def test_get_parent_when_root_is_curdir():
     for i in range(1, 10):
         assert path.get_parent(3+i) == os.path.join(*([os.path.pardir] * i))
 
-def test_get_parent_when_path_is_curdir():
+def test_relpath_get_parent_when_path_is_curdir():
     src_path = os.path.curdir
     path = Path(src_path)
     assert path.get_parent(1) == path.dirname
     for i in range(1, 10):
         assert path.get_parent(i) == os.path.join(*([os.path.pardir] * i))
 
-def test_get_parent_when_path_is_pardir():
+def test_relpath_get_parent_when_path_is_pardir():
     src_path = os.path.pardir
     path = Path(src_path)
     assert path.get_parent(1) == path.dirname

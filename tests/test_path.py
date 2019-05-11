@@ -131,15 +131,6 @@ def test_relpath_dirname_and_name():
     assert str(dirname) == os.path.join('..', '..', '..', '..')
     assert str(name) == '..'
 
-def test_path_dirname_root():
-    if sys.platform == 'win32':
-        top_dir = Path('c:')
-        assert top_dir.name == 'c:'
-    else: # posix
-        top_dir = Path('/')
-        assert top_dir.name == '/'
-    assert top_dir.dirname is None
-
 def test_path_name_pure_name():
     path_str, path = get_path_from_argv_0()
     assert path.name.pure_name == os.path.splitext(os.path.split(path_str)[1])[0]
@@ -147,3 +138,11 @@ def test_path_name_pure_name():
 def test_path_name_ext():
     path_str, path = get_path_from_argv_0()
     assert path.name.ext == os.path.splitext(os.path.split(path_str)[1])[1]
+
+def test_path_div():
+    ' allow to use `Path() / str()` expr '
+
+    path = Path.from_argv()
+    new_path = path / 'abc'
+    assert isinstance(path, Path)
+    assert new_path == os.path.join(sys.argv[0], 'abc')
