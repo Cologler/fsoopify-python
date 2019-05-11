@@ -7,6 +7,7 @@
 
 import sys
 import os
+import itertools
 
 import pytest
 
@@ -20,19 +21,27 @@ def get_path_from_argv_0():
     return path_str, path
 
 def test_path_types():
-    _, path = get_path_from_argv_0()
+    path = Path.from_argv()
     assert isinstance(path, Path)
     assert isinstance(path, str)
     assert issubclass(Path, str)
 
 def test_path_equals():
-    path_str, path = get_path_from_argv_0()
+    path = Path.from_argv()
+    path_str = sys.argv[0]
+    assert type(path) != type(path_str)
     assert path == path_str
     assert path_str == path
 
-    if sys.platform == 'win32':
-        assert Path('c:\\') == 'c:'
-        assert Path('c:\\') == 'C:'
+@pytest.mark.skipif(not NT, reason="only run on windows")
+def test_path_equals_on_win32():
+    # ignore case
+    for l, r in itertools.product(['c:', 'C:'], repeat=2):
+        assert Path(l) == Path(r)
+
+    # ignore drive sep
+    for l, r in itertools.product(['c:\\', 'C:'], repeat=2):
+        assert Path(l) == Path(r)
 
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
 def test_path_equals_without_case():
