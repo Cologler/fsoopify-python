@@ -5,6 +5,8 @@
 #
 # ----------
 
+import tempfile
+
 from pytest import raises
 
 from fsoopify import DirectoryInfo, FormatNotFoundError, FileInfo
@@ -21,24 +23,33 @@ example_data_1 = {
 }
 
 def test_dump_load_with_format():
-    for fmt in ('json', 'json5', 'yaml', 'toml', 'pickle'):
-        file_info = test_data_dir.get_fileinfo(f'test_data_1_{fmt}.{fmt}')
-        file_info.dump(example_data_1, fmt)
-        assert example_data_1 == file_info.load(fmt)
+    data = example_data_1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dir_info = DirectoryInfo(tmpdir)
+
+        for fmt in ('json', 'json5', 'yaml', 'toml', 'pickle'):
+            file_info = dir_info.get_fileinfo(f'data_{fmt}.{fmt}')
+            file_info.dump(data, fmt)
+            assert data == file_info.load(fmt)
 
 def test_dump_load_with_ext():
+    data = example_data_1
 
-    for ext in ('json', 'json5', 'yaml', 'toml'):
-        file_info = test_data_dir.get_fileinfo(f'test_data_2.{ext}')
-        file_info.dump(example_data_1)
-        assert example_data_1 == file_info.load()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dir_info = DirectoryInfo(tmpdir)
 
-    for fmt in ('pickle', ):
-        fi = test_data_dir.get_fileinfo(f'test_data_2_{fmt}.{fmt}')
-        with raises(FormatNotFoundError):
-            fi.dump(example_data_1)
-        with raises(FormatNotFoundError):
-            fi.load()
+        for ext in ('json', 'json5', 'yaml', 'toml'):
+            file_info = dir_info.get_fileinfo(f'data_.{ext}')
+            file_info.dump(data)
+            assert data == file_info.load()
+
+        for fmt in ('pickle', ):
+            fi = dir_info.get_fileinfo(f'data_{fmt}.{fmt}')
+            with raises(FormatNotFoundError):
+                fi.dump(data)
+            with raises(FormatNotFoundError):
+                fi.load()
 
 def test_pipfile():
     import pipfile
