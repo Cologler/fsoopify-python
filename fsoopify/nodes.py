@@ -335,29 +335,6 @@ class DirectoryInfo(NodeInfo):
             if not os.path.exists(self._path / unique_name):
                 return unique_name
 
-    def create_file(self, name: str, generate_unique_name: bool = False):
-        '''
-        create a `FileInfo` for a new file.
-
-        if the file was exists, and `generate_unique_name` if `False`, raise `FileExistsError`.
-
-        the op does mean the file is created on disk.
-        '''
-        def enumerate_name():
-            yield name
-            index = 0
-            while True:
-                index += 1
-                yield f'{name} ({index})'
-        for n in enumerate_name():
-            path = os.path.join(self._path, n)
-            if os.path.exists(path):
-                if not generate_unique_name:
-                    raise FileExistsError
-            return FileInfo(path)
-
-    create_fileinfo = create_file # keep old name
-
     # override common methods
 
     @property
