@@ -320,6 +320,21 @@ class DirectoryInfo(NodeInfo):
         '''
         return DirectoryInfo(os.path.join(self._path, name))
 
+    def get_unique_name(self, name: str, ext: str=''):
+        '''
+        generate a unique name for new item from the directory.
+        '''
+        def iter_name():
+            yield f'{name}{ext}'
+            index = 0
+            while True:
+                index += 1
+                yield f'{name} ({index}){ext}'
+
+        for unique_name in iter_name():
+            if not os.path.exists(self._path / unique_name):
+                return unique_name
+
     def create_file(self, name: str, generate_unique_name: bool = False):
         '''
         create a `FileInfo` for a new file.
