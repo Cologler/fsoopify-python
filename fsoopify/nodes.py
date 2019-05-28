@@ -354,6 +354,9 @@ class DirectoryInfo(NodeInfo):
             raise ValueError(mode)
 
         for key, value in tree.items():
+            if not isinstance(key, str):
+                raise TypeError(key)
+
             if isinstance(value, (str, bytes)):
                 subfile = self.get_fileinfo(key)
                 if subfile.is_file():
