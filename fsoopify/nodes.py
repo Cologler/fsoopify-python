@@ -335,6 +335,47 @@ class DirectoryInfo(NodeInfo):
             if not os.path.exists(self._path / unique_name):
                 return unique_name
 
+    def make_tree(self, tree: dict, mode: int=0):
+        '''
+        make directory structure with tree.
+
+        for each items in `tree`,
+
+        - if value is `str` or `bytes`, use the key as filename to create a file, write the value as content;
+        - if value is a `dict`, use the key as dirname to create a dir, then use the value to make sub tree.
+
+        `mode` is a const `int` value:
+
+        - `0` mean ignore all `FileExistsError`;
+        - `1` mean raise `FileExistsError` when any file exists;
+        - `2` mean overwrite all exists files;
+        '''
+        if mode not in (0, 1, 2):
+            raise ValueError(mode)
+
+        for key, value in tree.items():
+            if isinstance(value, (str, bytes)):
+                subfile = self.get_fileinfo(key)
+                if subfile.is_file():
+                    if mode == 0:
+                        continue
+                    elif mode == 1:
+                        raise FileExistsError(subfile.path)
+                    elif mode == 2:
+                        subfile.delete()
+                if isinstance(value, str):
+                    subfile.write_text(value)
+                else:
+                    subfile.write_bytes(value)
+
+            elif isinstance(value, dict):
+                subdir = self.get_dirinfo(key)
+                subdir.ensure_created()
+                subdir.make_tree(value, mode=mode)
+
+            else:
+                raise TypeError((key, value))
+
     # override common methods
 
     @property

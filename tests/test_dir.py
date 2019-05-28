@@ -36,3 +36,21 @@ def test_get_unique_name():
         dir_info.get_fileinfo(unique_name).write_text('')
         unique_name = dir_info.get_unique_name(name, '.py')
         assert unique_name == 'abc (2).py'
+
+def test_make_tree():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dir_info = DirectoryInfo(tmpdir)
+        dir_info.make_tree({
+            'a.txt': 'abc',
+            'b.txt': b'cde',
+            'subdir': {
+                'e.txt': 'ddd'
+            }
+        })
+
+        assert dir_info.get_fileinfo('a.txt').read_text() == 'abc'
+        assert dir_info.get_fileinfo('b.txt').read_text() == 'cde'
+
+        subdir = dir_info.get_dirinfo('subdir')
+        assert subdir.is_directory()
+        assert subdir.get_fileinfo('e.txt').read_text() == 'ddd'
