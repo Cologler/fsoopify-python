@@ -8,6 +8,7 @@
 
 import sys
 import os
+from typing import Iterable, List
 from abc import abstractmethod, ABC
 from enum import Enum
 
@@ -269,9 +270,9 @@ class DirectoryInfo(NodeInfo):
     def ensure_created(self):
         ''' ensure the directory was created. '''
         if not self.is_directory():
-            self.create()
+            os.makedirs(self.path)
 
-    def iter_items(self, depth: int = 1):
+    def iter_items(self, depth: int = 1) -> Iterable[NodeInfo]:
         '''
         get items from directory.
         '''
@@ -290,7 +291,7 @@ class DirectoryInfo(NodeInfo):
                     yield from itor(path, d)
         yield from itor(self._path, depth)
 
-    def list_items(self, depth: int = 1):
+    def list_items(self, depth: int = 1) -> List[NodeInfo]:
         '''
         get items from directory.
         '''
@@ -320,28 +321,79 @@ class DirectoryInfo(NodeInfo):
         '''
         return DirectoryInfo(os.path.join(self._path, name))
 
-    def create_file(self, name: str, generate_unique_name: bool = False):
+    def get_unique_name(self, name: str, ext: str=''):
         '''
-        create a `FileInfo` for a new file.
-
-        if the file was exists, and `generate_unique_name` if `False`, raise `FileExistsError`.
-
-        the op does mean the file is created on disk.
+        generate a unique name for new item from the directory.
         '''
-        def enumerate_name():
-            yield name
+        def iter_name():
+            yield f'{name}{ext}'
             index = 0
             while True:
                 index += 1
-                yield f'{name} ({index})'
-        for n in enumerate_name():
-            path = os.path.join(self._path, n)
-            if os.path.exists(path):
-                if not generate_unique_name:
-                    raise FileExistsError
-            return FileInfo(path)
+                yield f'{name} ({index}){ext}'
 
-    create_fileinfo = create_file # keep old name
+        for unique_name in iter_name():
+            if not os.path.exists(self._path / unique_name):
+                return unique_name
+
+    # tree api
+
+    def get_tree(self) -> dict:
+        '''
+        Get structure tree from current directory.
+        '''
+        tree = {}
+        for item in self.list_items():
+            name = str(item.path.name)
+            if item.node_type == NodeType.file:
+                tree[name] = item.read(mode='rb')
+            else:
+                tree[name] = item.get_tree()
+        return tree
+
+    def make_tree(self, tree: dict, mode: int=0):
+        '''
+        make directory structure with tree.
+
+        for each items in `tree`,
+
+        - if value is `str` or `bytes`, use the key as filename to create a file, write the value as content;
+        - if value is a `dict`, use the key as dirname to create a dir, then use the value to make sub tree.
+
+        `mode` is a const `int` value:
+
+        - `0` mean ignore all `FileExistsError`;
+        - `1` mean raise `FileExistsError` when any file exists;
+        - `2` mean overwrite all exists files;
+        '''
+        if mode not in (0, 1, 2):
+            raise ValueError(mode)
+
+        for key, value in tree.items():
+            if not isinstance(key, str):
+                raise TypeError(key)
+
+            if isinstance(value, (str, bytes)):
+                subfile = self.get_fileinfo(key)
+                if subfile.is_file():
+                    if mode == 0:
+                        continue
+                    elif mode == 1:
+                        raise FileExistsError(subfile.path)
+                    elif mode == 2:
+                        subfile.delete()
+                if isinstance(value, str):
+                    subfile.write_text(value)
+                else:
+                    subfile.write_bytes(value)
+
+            elif isinstance(value, dict):
+                subdir = self.get_dirinfo(key)
+                subdir.ensure_created()
+                subdir.make_tree(value, mode=mode)
+
+            else:
+                raise TypeError((key, value))
 
     # override common methods
 

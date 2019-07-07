@@ -7,6 +7,7 @@
 
 import sys
 import os
+import itertools
 
 import pytest
 
@@ -20,19 +21,27 @@ def get_path_from_argv_0():
     return path_str, path
 
 def test_path_types():
-    _, path = get_path_from_argv_0()
+    path = Path.from_argv()
     assert isinstance(path, Path)
     assert isinstance(path, str)
     assert issubclass(Path, str)
 
 def test_path_equals():
-    path_str, path = get_path_from_argv_0()
+    path = Path.from_argv()
+    path_str = sys.argv[0]
+    assert type(path) != type(path_str)
     assert path == path_str
     assert path_str == path
 
-    if sys.platform == 'win32':
-        assert Path('c:\\') == 'c:'
-        assert Path('c:\\') == 'C:'
+@pytest.mark.skipif(not NT, reason="only run on windows")
+def test_path_equals_on_win32():
+    # ignore case
+    for l, r in itertools.product(['c:', 'C:'], repeat=2):
+        assert Path(l) == Path(r)
+
+    # ignore drive sep
+    for l, r in itertools.product(['c:\\', 'C:'], repeat=2):
+        assert Path(l) == Path(r)
 
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
 def test_path_equals_without_case():
@@ -122,15 +131,6 @@ def test_relpath_dirname_and_name():
     assert str(dirname) == os.path.join('..', '..', '..', '..')
     assert str(name) == '..'
 
-def test_path_dirname_root():
-    if sys.platform == 'win32':
-        top_dir = Path('c:')
-        assert top_dir.name == 'c:'
-    else: # posix
-        top_dir = Path('/')
-        assert top_dir.name == '/'
-    assert top_dir.dirname is None
-
 def test_path_name_pure_name():
     path_str, path = get_path_from_argv_0()
     assert path.name.pure_name == os.path.splitext(os.path.split(path_str)[1])[0]
@@ -139,22 +139,10 @@ def test_path_name_ext():
     path_str, path = get_path_from_argv_0()
     assert path.name.ext == os.path.splitext(os.path.split(path_str)[1])[1]
 
-def test_path_from_caller_file():
-    path = Path.from_caller_file()
-    assert path == os.path.join(os.path.abspath('.'), __file__)
+def test_path_div():
+    ' allow to use `Path() / str()` expr '
 
-def test_path_from_caller_module_root():
-    import outer_module_file
-    assert outer_module_file.module_root == os.path.join(
-        os.path.abspath('.'), 'tests', 'outer_module_file.py'
-    )
-
-    import outer_module_dir
-    assert outer_module_dir.module_root == os.path.join(
-        os.path.abspath('.'), 'tests', 'outer_module_dir', '__init__.py'
-    )
-
-    import outer_module_dir.mod
-    assert outer_module_dir.mod.module_root == os.path.join(
-        os.path.abspath('.'), 'tests', 'outer_module_dir', '__init__.py'
-    )
+    path = Path.from_argv()
+    new_path = path / 'abc'
+    assert isinstance(path, Path)
+    assert new_path == os.path.join(sys.argv[0], 'abc')
