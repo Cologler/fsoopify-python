@@ -1,0 +1,9 @@
+{
+    "author": "Cologler",
+    "author_email": "skyoflw@gmail.com",
+    "envs": [
+        "python",
+        "git",
+        "pipenv"
+    ]
+}
