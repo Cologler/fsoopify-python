@@ -54,3 +54,17 @@ def test_make_tree():
         subdir = dir_info.get_dirinfo('subdir')
         assert subdir.is_directory()
         assert subdir.get_fileinfo('e.txt').read_text() == 'ddd'
+
+def test_get_tree():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tree = {
+            'a.txt': b'abc',
+            'b.txt': b'cde',
+            'subdir': {
+                'e.txt': b'ddd'
+            }
+        }
+        dir_info = DirectoryInfo(tmpdir)
+        dir_info.make_tree(tree)
+
+        assert dir_info.get_tree() == tree

@@ -8,6 +8,7 @@
 
 import sys
 import os
+from typing import Iterable, List
 from abc import abstractmethod, ABC
 from enum import Enum
 
@@ -271,7 +272,7 @@ class DirectoryInfo(NodeInfo):
         if not self.is_directory():
             os.makedirs(self.path)
 
-    def iter_items(self, depth: int = 1):
+    def iter_items(self, depth: int = 1) -> Iterable[NodeInfo]:
         '''
         get items from directory.
         '''
@@ -290,7 +291,7 @@ class DirectoryInfo(NodeInfo):
                     yield from itor(path, d)
         yield from itor(self._path, depth)
 
-    def list_items(self, depth: int = 1):
+    def list_items(self, depth: int = 1) -> List[NodeInfo]:
         '''
         get items from directory.
         '''
@@ -334,6 +335,21 @@ class DirectoryInfo(NodeInfo):
         for unique_name in iter_name():
             if not os.path.exists(self._path / unique_name):
                 return unique_name
+
+    # tree api
+
+    def get_tree(self) -> dict:
+        '''
+        Get structure tree from current directory.
+        '''
+        tree = {}
+        for item in self.list_items():
+            name = str(item.path.name)
+            if item.node_type == NodeType.file:
+                tree[name] = item.read(mode='rb')
+            else:
+                tree[name] = item.get_tree()
+        return tree
 
     def make_tree(self, tree: dict, mode: int=0):
         '''
