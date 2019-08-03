@@ -8,7 +8,7 @@
 
 import sys
 import os
-from typing import Iterable, List
+from typing import Iterable, List, Any
 from abc import abstractmethod, ABC
 from enum import Enum
 
@@ -247,6 +247,26 @@ class FileInfo(NodeInfo):
         '''
         return dump(self, obj, format=format, kwargs=kwargs)
 
+    def load_session(self, format=None, *, load_kwargs={}, dump_kwargs={}):
+        '''
+        load the file in a `session`, auto dump `session.data` into file when session `__exit__`;
+
+        - if the file does not exists, `session.data` will be `None`.
+        - set `session.data` to `None` will remove the file from disk.
+
+        usage:
+
+        ``` py
+        with file.load_session() as session:
+            # read or edit session.data
+            ...
+        ```
+        '''
+        data = self.load(format, kwargs=load_kwargs) if self.is_file() else None
+        session = _LoadSession(self, format, dump_kwargs)
+        session.data = data
+        return session
+
     # hash system
 
     def get_file_hash(self, *algorithms: str):
@@ -424,3 +444,27 @@ class DirectoryInfo(NodeInfo):
         # child
         for item in self.list_items():
             item.create_hardlink(os.path.join(dest_path, item.path.name))
+
+
+class _LoadSession:
+    '''
+    a loaded session for a `FileInfo`.
+
+    note: set `.data` to `None` will remove the file from disk.
+    '''
+
+    def __init__(self, file: FileInfo, format, dump_kwargs: dict):
+        self.data: Any = None
+        self._file = file
+        self._format = format
+        self._dump_kwargs = dump_kwargs
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        if self.data is None:
+            if self._file.is_file():
+                self._file.delete()
+        else:
+            self._file.dump(self.data, self._format, kwargs=self._dump_kwargs)
