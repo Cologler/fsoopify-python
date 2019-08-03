@@ -455,6 +455,7 @@ class _LoadSession:
 
     def __init__(self, file: FileInfo, format, dump_kwargs: dict):
         self.data: Any = None
+        self.is_modified = True
         self._file = file
         self._format = format
         self._dump_kwargs = dump_kwargs
@@ -463,6 +464,8 @@ class _LoadSession:
         return self
 
     def __exit__(self, *_):
+        if not self.is_modified:
+            return
         if self.data is None:
             if self._file.is_file():
                 self._file.delete()
