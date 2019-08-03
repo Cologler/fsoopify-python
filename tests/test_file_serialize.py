@@ -51,6 +51,26 @@ def test_dump_load_with_ext():
             with raises(FormatNotFoundError):
                 fi.load()
 
+def test_load_session():
+    data = example_data_1
+    name = 'test_load_session.json'
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dir_info = DirectoryInfo(tmpdir)
+        file_info = dir_info.get_fileinfo(name)
+        if file_info.is_exists():
+            file_info.delete()
+
+        assert not file_info.is_exists()
+        with file_info.load_session() as s:
+            assert s.data is None
+            s.data = data
+        assert file_info.is_exists()
+        with file_info.load_session() as s:
+            assert s.data == data
+            s.data = None
+        assert not file_info.is_exists()
+
+
 def test_pipfile():
     import pipfile
     assert FileInfo('Pipfile').load() == pipfile.load('Pipfile').data
