@@ -61,11 +61,11 @@ def test_load_session():
             file_info.delete()
 
         assert not file_info.is_exists()
-        with file_info.load_session() as s:
+        with file_info.load_context() as s:
             assert s.data is None
             s.data = data
         assert file_info.is_exists()
-        with file_info.load_session() as s:
+        with file_info.load_context() as s:
             assert s.data == data
             s.data = None
         assert not file_info.is_exists()
