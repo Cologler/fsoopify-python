@@ -247,25 +247,24 @@ class FileInfo(NodeInfo):
         '''
         return dump(self, obj, format=format, kwargs=kwargs)
 
-    def load_session(self, format=None, *, load_kwargs={}, dump_kwargs={}):
+    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}):
         '''
-        load the file in a `session`, auto dump `session.data` into file when session `__exit__`;
+        load the file in a context, auto dump `context.data` into file when context exit.
 
-        - if the file does not exists, `session.data` will be `None`.
-        - set `session.data` to `None` will remove the file from disk.
+        - if the file does not exists, `context.data` will be `None`.
+        - set `context.data` to `None` will remove the file from disk.
+        - by default, `context.save_on_exit` is `True`.
 
         usage:
 
         ``` py
-        with file.load_session() as session:
-            # read or edit session.data
+        with file.load_context() as context:
+            # read or edit context.data
             ...
         ```
         '''
-        data = self.load(format, kwargs=load_kwargs) if self.is_file() else None
-        session = _LoadSession(self, format, dump_kwargs)
-        session.data = data
-        return session
+        context = _DataContext(self, format, load_kwargs, dump_kwargs)
+        return context
 
     # hash system
 
@@ -446,26 +445,33 @@ class DirectoryInfo(NodeInfo):
             item.create_hardlink(os.path.join(dest_path, item.path.name))
 
 
-class _LoadSession:
-    '''
-    a loaded session for a `FileInfo`.
-
-    note: set `.data` to `None` will remove the file from disk.
-    '''
-
-    def __init__(self, file: FileInfo, format, dump_kwargs: dict):
-        self.data: Any = None
-        self.is_modified = True
+class _DataContext:
+    def __init__(self, file: FileInfo, format, load_kwargs: dict, dump_kwargs: dict):
+        self._data = None
+        self.save_on_exit = True
         self._file = file
         self._format = format
+        self._load_kwargs = load_kwargs
         self._dump_kwargs = dump_kwargs
+
+    @property
+    def data(self):
+        if self._data is None:
+            self.data = self._file.load(self._format, kwargs=self._load_kwargs) if self._file.is_file() else None
+        return self._data[0]
+
+    @data.setter
+    def data(self, value):
+        self._data = (value, )
 
     def __enter__(self):
         return self
 
     def __exit__(self, *_):
-        if not self.is_modified:
-            return
+        if self.save_on_exit:
+            self.save()
+
+    def save(self):
         if self.data is None:
             if self._file.is_file():
                 self._file.delete()
