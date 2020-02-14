@@ -17,7 +17,7 @@ def test_path_from_argv():
 
 def test_path_from_main_file():
     path = Path.from_main_file()
-    assert path.endswith('pytest.py') # should run by pytest
+    assert path.endswith('.py') # should run by pytest
 
 def _get_example_modules():
     yield importlib.import_module('ex_module_2')
