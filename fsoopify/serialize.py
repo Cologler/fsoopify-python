@@ -6,6 +6,7 @@
 # ----------
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
 EXT2FORMAT_MAP = {
     '.json' : 'json',
@@ -20,6 +21,7 @@ NAME2FORMAT_MAP = {
 }
 
 _REGISTERED_SERIALIZERS = {}
+
 
 class FormatNotFoundError(Exception):
     pass
@@ -41,31 +43,82 @@ def _detect_format(file_info):
     raise FormatNotFoundError(f'Cannot detect format from file {file_info!r}')
 
 def load(file_info, format=None, *, kwargs={}):
-    if format is None:
-        format = _detect_format(file_info)
-    serializer = _load_serializer(format)
+    serializer = get_serializer(file_info, format)
     try:
-        return serializer.load(file_info, kwargs)
+        return serializer.loadf(file_info, kwargs)
     except Exception as err:
         raise SerializeError(err)
 
 def dump(file_info, obj, format=None, *, kwargs={}):
-    if format is None:
-        format = _detect_format(file_info)
-    serializer = _load_serializer(format)
+    serializer = get_serializer(file_info, format)
     try:
-        return serializer.dump(file_info, obj, kwargs)
+        return serializer.dumpf(file_info, obj, kwargs)
     except NotImplementedError:
         raise
     except Exception as err:
         raise SerializeError(err)
 
-def register_format(name):
+
+class ISerializer:
+    format: str = '' # setted on `register_format`
+
+    def is_overrided(self, name: str):
+        return getattr(type(self), name, None) is not getattr(ISerializer, name, None)
+
+    def loads(self, s: str, kwargs: dict):
+        if self.is_overrided('loadb'):
+            buffer = s.encode(kwargs.pop('encoding', 'utf-8'))
+            return self.loadb(buffer, kwargs)
+
+        raise NotImplementedError
+
+    def loadb(self, s: bytes, kwargs: dict):
+        if self.is_overrided('loads'):
+            text = s.decode(kwargs.pop('encoding', 'utf-8'))
+            return self.loads(text, kwargs)
+
+        raise NotImplementedError
+
+    def loadf(self, src, kwargs):
+        if self.is_overrided('loadb'):
+            return self.loadb(src.read_bytes(), kwargs)
+
+        if self.is_overrided('loads'):
+            return self.loads(src.read_text(), kwargs)
+
+        raise NotImplementedError
+
+    def dumps(self, obj, kwargs: dict) -> str:
+        if self.is_overrided('dumpb'):
+            return self.dumpb(obj, kwargs).decode(kwargs.pop('encoding', 'utf-8'))
+
+        raise NotImplementedError
+
+    def dumpb(self, obj, kwargs: dict) -> bytes:
+        if self.is_overrided('dumps'):
+            return self.dumps(obj, kwargs).encode(kwargs.pop('encoding', 'utf-8'))
+
+        raise NotImplementedError
+
+    def dumpf(self, src, obj, kwargs: dict) -> None:
+        if self.is_overrided('dumpb'):
+            src.write_bytes(self.dumpb(obj, kwargs), append=False)
+            return
+
+        if self.is_overrided('dumps'):
+            src.write_text(self.dumps(obj, kwargs), append=False)
+            return
+
+        raise NotImplementedError
+
+
+def register_format(name: str):
     '''
     register a serializer for load and dump.
     '''
     def decorator(cls):
         _REGISTERED_SERIALIZERS[name] = cls
+        cls.format = name
         return cls
     return decorator
 
@@ -79,42 +132,52 @@ def _load_serializer(format_):
     cls = _REGISTERED_SERIALIZERS[format_]
     return cls()
 
+def get_serializer(file_info, format: Optional[str]) -> ISerializer:
+    if format is None:
+        format = _detect_format(file_info)
 
-class ISerializer(ABC):
-    @abstractmethod
-    def load(self, src, kwargs):
-        raise NotImplementedError
+    if not isinstance(format, str):
+        raise TypeError(f'format must be str.')
 
-    @abstractmethod
-    def dump(self, src, obj, kwargs):
-        raise NotImplementedError
+    if format not in _REGISTERED_SERIALIZERS:
+        raise FormatNotFoundError(f'unknown format: {format}')
+
+    cls = _REGISTERED_SERIALIZERS[format]
+    return cls()
 
 
 @register_format('json')
 class JsonSerializer(ISerializer):
-    def load(self, src, kwargs):
+    def __init__(self):
+        super().__init__()
         import json
-        return json.loads(src.read_text(), **kwargs)
+        self.json = json
 
-    def dump(self, src, obj, kwargs):
-        import json
-        return src.write_text(json.dumps(obj, **kwargs), append=False)
+    def loads(self, s: str, kwargs: dict):
+        return self.json.loads(s, **kwargs)
+
+    def dumps(self, obj, kwargs: dict) -> str:
+        return self.json.dumps(obj, **kwargs)
 
 
 @register_format('pickle')
 class PickleSerializer(ISerializer):
-    def load(self, src, kwargs):
+    def __init__(self):
+        super().__init__()
         import pickle
-        return pickle.loads(src.read_bytes(), **kwargs)
+        self.pickle = pickle
 
-    def dump(self, src, obj, kwargs):
-        import pickle
-        return src.write_bytes(pickle.dumps(obj, **kwargs), append=False)
+    def loadb(self, s: bytes, kwargs: dict):
+        return self.pickle.loads(s, **kwargs)
+
+    def dumpb(self, obj, kwargs: dict) -> bytes:
+        return self.pickle.dumps(obj, **kwargs)
 
 
 @register_format('json5')
 class Json5Serializer(ISerializer):
     def __init__(self):
+        super().__init__()
         try:
             import json5
         except ModuleNotFoundError as err:
@@ -122,16 +185,17 @@ class Json5Serializer(ISerializer):
                 'You need install `json5` before use it.')
         self.json5 = json5
 
-    def load(self, src, kwargs):
-        return self.json5.loads(src.read_text(), **kwargs)
+    def loads(self, s: str, kwargs: dict):
+        return self.json5.loads(s, **kwargs)
 
-    def dump(self, src, obj, kwargs):
-        return src.write_text(self.json5.dumps(obj, **kwargs), append=False)
+    def dumps(self, obj, kwargs: dict) -> str:
+        return self.json5.dumps(obj, **kwargs)
 
 
 @register_format('toml')
 class TomlSerializer(ISerializer):
     def __init__(self):
+        super().__init__()
         try:
             import toml
         except ModuleNotFoundError as err:
@@ -139,16 +203,17 @@ class TomlSerializer(ISerializer):
                 'You need install `toml` before use it.')
         self.toml = toml
 
-    def load(self, src, kwargs):
-        return self.toml.loads(src.read_text(), **kwargs)
+    def loads(self, s: str, kwargs: dict):
+        return self.toml.loads(s, **kwargs)
 
-    def dump(self, src, obj, kwargs):
-        return src.write_text(self.toml.dumps(obj, **kwargs), append=False)
+    def dumps(self, obj, kwargs: dict) -> str:
+        return self.toml.dumps(obj, **kwargs)
 
 
 @register_format('yaml')
 class YamlSerializer(ISerializer):
     def __init__(self):
+        super().__init__()
         try:
             import yaml
         except ModuleNotFoundError as err:
@@ -156,16 +221,17 @@ class YamlSerializer(ISerializer):
                 'You need install `pyyaml` before use it.')
         self.yaml = yaml
 
-    def load(self, src, kwargs):
-        return self.yaml.safe_load(src.read_text(), **kwargs)
+    def loads(self, s: str, kwargs: dict):
+        return self.yaml.safe_load(s, **kwargs)
 
-    def dump(self, src, obj, kwargs):
-        return src.write_text(self.yaml.dump(obj, **kwargs), append=False)
+    def dumps(self, obj, kwargs: dict) -> str:
+        return self.yaml.dump(obj, **kwargs)
 
 
 @register_format('pipfile')
 class PipfileSerializer(ISerializer):
     def __init__(self):
+        super().__init__()
         try:
             import pipfile
         except ModuleNotFoundError as err:
@@ -173,9 +239,9 @@ class PipfileSerializer(ISerializer):
                 'You need install `pipfile` before use it.')
         self.pipfile = pipfile
 
-    def load(self, src, kwargs):
+    def loadf(self, src, kwargs):
         pipfile = self.pipfile.load(src.path)
         return pipfile.data
 
-    def dump(self, src, obj, kwargs):
-        raise NotImplementedError('Cannot dump `pipfile`')
+    def dumps(self, obj, kwargs: dict) -> str:
+        raise NotImplementedError('dump `pipfile` is not supported.')
