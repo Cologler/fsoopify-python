@@ -105,3 +105,4 @@ venv.bak/
 
 test_data_dir
 .pytest_cache
+.vscode/settings.json
