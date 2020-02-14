@@ -90,7 +90,7 @@ def test_abspath_with_root_on_win32():
     path = Path(path_str)
     assert not os.path.isabs(path_str)
     assert path.is_abspath()
-    assert path.get_abspath() == os.path.abspath(path_str)
+    assert path.get_abspath() == os.path.abspath('c:\\')
 
 def test_abspath_dirname_and_name():
     path_str, path = get_path_from_argv_0()
