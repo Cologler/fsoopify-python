@@ -14,7 +14,7 @@ from enum import Enum
 
 from .paths import Path
 from .size import Size
-from .serialize import load, dump, get_serializer
+from .serialize import load, dump, get_serializer, serctx
 
 class NodeType(Enum):
     file = 1
@@ -461,9 +461,17 @@ class _DataContext:
 
         self._on_load()
 
+    def _loadb(self, s: bytes):
+        with serctx():
+            return self._serializer.loadb(s, self._load_kwargs)
+
+    def _dumpb(self) -> bytes:
+        with serctx():
+            return self._serializer.dumpb(self.data, kwargs=self._dump_kwargs)
+
     def _on_load(self):
         if self._file.is_file():
-            self._data = self._serializer.loadb(self._file.read_bytes(), self._load_kwargs)
+            self._data = self._loadb(self._file.read_bytes())
         else:
             self._data = None
 
@@ -509,11 +517,11 @@ class _LockedDataContext(_DataContext):
         self._fp = self._file.open(mode)
         self.portalocker.lock(self._fp, self.portalocker.LOCK_EX)
         if is_exists:
-            self._data = self._serializer.loadb(self._fp.read(), self._load_kwargs)
+            self._data = self._loadb(self._fp.read())
 
     def _on_dump(self):
         if self.data is not None:
-            buf = self._serializer.dumpb(self.data, kwargs=self._dump_kwargs)
+            buf = self._dumpb()
             self._fp.seek(0)
             self._fp.write(buf)
             self._fp.truncate()

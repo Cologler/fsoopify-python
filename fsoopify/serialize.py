@@ -44,20 +44,27 @@ def _detect_format(file_info):
 
 def load(file_info, format=None, *, kwargs={}):
     serializer = get_serializer(file_info, format)
-    try:
+    with serctx():
         return serializer.loadf(file_info, kwargs)
-    except Exception as err:
-        raise SerializeError(err)
 
 def dump(file_info, obj, format=None, *, kwargs={}):
     serializer = get_serializer(file_info, format)
-    try:
+    with serctx():
         return serializer.dumpf(file_info, obj, kwargs)
-    except NotImplementedError:
-        raise
-    except Exception as err:
-        raise SerializeError(err)
 
+class _SerializeContext:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_val is not None:
+            if exc_type in (NotImplementedError, SerializeError):
+                raise exc_val from None
+            raise SerializeError(exc_val)
+
+def serctx():
+    'catch serialize error in context'
+    return _SerializeContext()
 
 class ISerializer:
     format: str = '' # setted on `register_format`
