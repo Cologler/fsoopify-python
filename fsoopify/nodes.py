@@ -14,7 +14,7 @@ from enum import Enum
 
 from .paths import Path
 from .size import Size
-from .serialize import load, dump
+from .serialize import load, dump, get_serializer, serctx
 
 class NodeType(Enum):
     file = 1
@@ -247,13 +247,14 @@ class FileInfo(NodeInfo):
         '''
         return dump(self, obj, format=format, kwargs=kwargs)
 
-    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}):
+    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}, lock=False):
         '''
         load the file in a context, auto dump `context.data` into file when context exit.
 
         - if the file does not exists, `context.data` will be `None`.
         - set `context.data` to `None` will remove the file from disk.
         - by default, `context.save_on_exit` is `True`.
+        - if `lock` is `True`, lock the file until the context exit. (`lock` require install package `portalocker`)
 
         usage:
 
@@ -263,7 +264,10 @@ class FileInfo(NodeInfo):
             ...
         ```
         '''
-        context = _DataContext(self, format, load_kwargs, dump_kwargs)
+        if lock:
+            context = _LockedDataContext(self, format, load_kwargs, dump_kwargs)
+        else:
+            context = _DataContext(self, format, load_kwargs, dump_kwargs)
         return context
 
     # hash system
@@ -451,18 +455,40 @@ class _DataContext:
         self.save_on_exit = True
         self._file = file
         self._format = format
+        self._serializer = get_serializer(file, format)
         self._load_kwargs = load_kwargs
         self._dump_kwargs = dump_kwargs
 
+        self._on_load()
+
+    def _loadb(self, s: bytes):
+        with serctx():
+            return self._serializer.loadb(s, self._load_kwargs)
+
+    def _dumpb(self) -> bytes:
+        with serctx():
+            return self._serializer.dumpb(self.data, kwargs=self._dump_kwargs)
+
+    def _on_load(self):
+        if self._file.is_file():
+            self._data = self._loadb(self._file.read_bytes())
+        else:
+            self._data = None
+
+    def _on_dump(self):
+        if self.data is None:
+            if self._file.is_file():
+                self._file.delete()
+        else:
+            self._file.dump(self.data, self._format, kwargs=self._dump_kwargs)
+
     @property
     def data(self):
-        if self._data is None:
-            self.data = self._file.load(self._format, kwargs=self._load_kwargs) if self._file.is_file() else None
-        return self._data[0]
+        return self._data
 
     @data.setter
     def data(self, value):
-        self._data = (value, )
+        self._data = value
 
     def __enter__(self):
         return self
@@ -472,8 +498,36 @@ class _DataContext:
             self.save()
 
     def save(self):
-        if self.data is None:
+        self._on_dump()
+
+
+class _LockedDataContext(_DataContext):
+    def __init__(self, file, format, load_kwargs, dump_kwargs):
+        import portalocker
+        self.portalocker = portalocker
+        self._fp = None
+        super().__init__(file, format, load_kwargs, dump_kwargs)
+
+    def _on_load(self):
+        is_exists = self._file.is_file()
+        if is_exists:
+            mode = 'r+b'
+        else:
+            mode = 'wb'
+        self._fp = self._file.open(mode)
+        self.portalocker.lock(self._fp, self.portalocker.LOCK_EX)
+        if is_exists:
+            self._data = self._loadb(self._fp.read())
+
+    def _on_dump(self):
+        if self.data is not None:
+            buf = self._dumpb()
+            self._fp.seek(0)
+            self._fp.write(buf)
+            self._fp.truncate()
+            self._fp.close()
+
+        else:
+            self._fp.close()
             if self._file.is_file():
                 self._file.delete()
-        else:
-            self._file.dump(self.data, self._format, kwargs=self._dump_kwargs)

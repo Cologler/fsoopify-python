@@ -36,6 +36,7 @@ file.read_text() and file.write_text()
 file.read_bytes() and file.write_bytes()
 file.copy_to()
 file.load() and file.dump() # I love this API
+file.load_context() # load and dump the file in a context.
 
 # api for directory
 directory.create() and directory.ensure_created()
@@ -45,3 +46,11 @@ directory.list_items()
 directory.get_fileinfo() and directory.get_dirinfo()
 directory.has_file() and directory.has_directory()
 ```
+
+## Optional packages
+
+* `portalocker` - lock the file when calling `file.load_context()`
+* `json5` - load or dump json5 file
+* `pyyaml` - load or dump yaml file
+* `toml` - load or dump toml file
+* `pipfile` - load pipfile

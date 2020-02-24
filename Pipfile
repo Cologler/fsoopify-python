@@ -5,7 +5,6 @@ name = "pypi"
 
 [packages]
 
-
 [dev-packages]
 "json5" = "*"
 pyyaml = "*"
@@ -13,3 +12,4 @@ toml = "*"
 pytest = "*"
 pipfile = "*"
 setupmeta-builder = "*"
+portalocker = "*"
