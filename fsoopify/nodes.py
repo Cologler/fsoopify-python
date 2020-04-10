@@ -14,7 +14,7 @@ from enum import Enum
 
 from .paths import Path
 from .size import Size
-from .serialize import load, dump, get_serializer, serctx
+from .serialize import load, dump, get_serializer
 
 class NodeType(Enum):
     file = 1
@@ -462,12 +462,10 @@ class _DataContext:
         self._on_load()
 
     def _loadb(self, s: bytes):
-        with serctx():
-            return self._serializer.loadb(s, self._load_kwargs)
+        return self._serializer.loadb(s, self._load_kwargs)
 
     def _dumpb(self) -> bytes:
-        with serctx():
-            return self._serializer.dumpb(self.data, kwargs=self._dump_kwargs)
+        return self._serializer.dumpb(self.data, kwargs=self._dump_kwargs)
 
     def _on_load(self):
         if self._file.is_file():

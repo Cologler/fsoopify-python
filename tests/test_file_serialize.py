@@ -97,9 +97,3 @@ def test_load_context_with_locked():
         with file_info.load_context(lock=True) as s:
             s.data = None
         assert not file_info.is_exists()
-
-def test_pipfile():
-    import pipfile
-    assert FileInfo('Pipfile').load() == pipfile.load('Pipfile').data
-    with raises(NotImplementedError):
-        FileInfo('Pipfile').dump({})
