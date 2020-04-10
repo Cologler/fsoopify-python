@@ -462,10 +462,12 @@ class _DataContext:
         self._on_load()
 
     def _loadb(self, s: bytes):
-        return self._serializer.loadb(s, self._load_kwargs)
+        return self._serializer.loadb(s, options={})
 
     def _dumpb(self) -> bytes:
-        return self._serializer.dumpb(self.data, kwargs=self._dump_kwargs)
+        return self._serializer.dumpb(self.data, options={
+            'origin_kwargs': self._dump_kwargs
+        })
 
     def _on_load(self):
         if self._file.is_file():
@@ -478,7 +480,7 @@ class _DataContext:
             if self._file.is_file():
                 self._file.delete()
         else:
-            self._file.dump(self.data, self._format, kwargs=self._dump_kwargs)
+            self._file.write_bytes(self._dumpb(), append=False)
 
     @property
     def data(self):
