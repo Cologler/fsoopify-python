@@ -129,16 +129,6 @@ def register_format(name: str):
         return cls
     return decorator
 
-def _load_serializer(format_):
-    if not isinstance(format_, str):
-        raise TypeError(f'format must be str.')
-
-    if format_ not in _REGISTERED_SERIALIZERS:
-        raise FormatNotFoundError(f'unknown format: {format_}')
-
-    cls = _REGISTERED_SERIALIZERS[format_]
-    return cls()
-
 def get_serializer(file_info, format: Optional[str]) -> ISerializer:
     if format is None:
         format = _detect_format(file_info)
