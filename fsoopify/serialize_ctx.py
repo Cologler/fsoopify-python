@@ -25,7 +25,9 @@ def load_context(f, format: str=None, *, load_kwargs: dict, dump_kwargs: dict, l
     if lock:
         portalocker.lock(fp, portalocker.LOCK_EX)
     if is_exists:
-        data = serializer.loadf(fp, options={})
+        data = serializer.loadf(fp, options={
+            'origin_kwargs': load_kwargs.copy()
+        })
     else:
         data = None
 
@@ -36,9 +38,10 @@ def load_context(f, format: str=None, *, load_kwargs: dict, dump_kwargs: dict, l
 
     if ctx.save_on_exit:
         if data is not None:
-            buf = serializer.dumpb(data, options={
-                'origin_kwargs': dump_kwargs
-            })
+            options={
+                'origin_kwargs': dump_kwargs.copy()
+            }
+            buf = serializer.dumpb(data, options=options)
             fp.seek(0)
             fp.write(buf)
             fp.truncate()

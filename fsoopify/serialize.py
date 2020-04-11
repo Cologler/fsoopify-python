@@ -17,7 +17,9 @@ from anyser.err import FormatNotFoundError, SerializeError, NotSupportError
 def load(file_info, format=None, *, kwargs={}):
     serializer = get_serializer(file_info, format)
     with file_info.open('rb') as fp:
-        return serializer.loadf(fp, options={})
+        return serializer.loadf(fp, options={
+            'origin_kwargs': kwargs.copy()
+        })
 
 def dump(file_info, obj, format=None, *, kwargs={}):
     serializer = get_serializer(file_info, format)
