@@ -34,6 +34,8 @@ def get_serializer(file_info, format: Optional[str]):
         ext = file_info.path.name.ext.lower()
         serializer = anyser.core.find_serializer(file_info.path.name.ext.lower())
         if serializer is None:
+            serializer = anyser.core.find_serializer(file_info.path.name.lower())
+        if serializer is None:
             raise FormatNotFoundError(f'Cannot detect format from file {file_info!r}')
 
     else:
@@ -42,3 +44,31 @@ def get_serializer(file_info, format: Optional[str]):
             raise FormatNotFoundError(f'unknown format: {format}')
 
     return serializer
+
+@register_format('pipfile')
+class PipfileSerializer(ISerializer):
+    format_name = 'pipfile'
+
+    def __init__(self):
+        super().__init__()
+        import pipfile
+        self.pipfile = pipfile
+
+    def loads(self, s, options):
+        raise NotSupportError
+
+    def loadb(self, b, options):
+        raise NotSupportError
+
+    def loadf(self, fp, options):
+        pipfile = self.pipfile.load(fp.fileno())
+        try:
+            fp.close()
+            # first fp.close() will raise IOError: Bad file descriptor beacuse pipfile.load close fd.
+            # catch here to prevent raise on outside
+        except IOError:
+            pass
+        return pipfile.data
+
+    def dumpf(self, obj, fp, options):
+        raise NotSupportError('dump `pipfile` is not supported.')
