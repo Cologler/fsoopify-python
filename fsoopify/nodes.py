@@ -493,9 +493,10 @@ class _DataContext:
     def __enter__(self):
         return self
 
-    def __exit__(self, *_):
-        if self.save_on_exit:
-            self.save()
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value is None:
+            if self.save_on_exit:
+                self.save()
 
     def save(self):
         self._on_dump()
