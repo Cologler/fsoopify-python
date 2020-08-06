@@ -8,9 +8,10 @@
 
 import sys
 import os
-from typing import Iterable, List, Any
+from typing import Iterable, List, Any, Union
 from abc import abstractmethod, ABC
 from enum import Enum
+import io
 
 from .paths import Path
 from .size import Size
@@ -142,6 +143,14 @@ class FileInfo(NodeInfo):
                     newline=newline,
                     closefd=closefd)
 
+    def open_for_read_bytes(self, *, buffering=-1):
+        ''' open the file with read bytes mode. '''
+        return self.open('rb', buffering=buffering)
+
+    def open_for_read_text(self, *, encoding='utf-8'):
+        ''' open the file with read text mode. '''
+        return self.open('r', encoding=encoding)
+
     @property
     def size(self):
         ''' get file size. '''
@@ -150,12 +159,30 @@ class FileInfo(NodeInfo):
     def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None):
         ''' write data into the file. '''
         if mode is None:
-            mode = 'w' if isinstance(data, str) else 'wb'
+            if isinstance(data, (str, io.TextIOBase)):
+                mode = 'w'
+            elif isinstance(data, (bytes, bytearray, io.BufferedIOBase)):
+                mode = 'wb'
+            else:
+                raise TypeError(type(data))
+
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
-            return fp.write(data)
+            if isinstance(data, (str, bytes, bytearray)):
+                return fp.write(data)
+            else:
+                read_buffering = buffering
+                if read_buffering < 2:
+                    read_buffering = io.DEFAULT_BUFFER_SIZE
+                total = 0
+                while True:
+                    b = data.read(read_buffering)
+                    if not b:
+                        break
+                    total += fp.write(b)
+                return total
 
     def read(self, mode='r', *, buffering=-1, encoding=None, newline=None):
-        ''' read data from the file. '''
+        ''' read all content from the file. '''
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
 
@@ -164,10 +191,20 @@ class FileInfo(NodeInfo):
         mode = 'a' if append else 'w'
         return self.write(text, mode=mode, encoding=encoding)
 
-    def write_bytes(self, data: bytes, *, append=True):
+    def write_bytes(self, data: Union[bytes, bytearray], *, append=True):
         ''' write bytes into the file. '''
         mode = 'ab' if append else 'wb'
         return self.write(data, mode=mode)
+
+    def write_from_stream(self, stream: io.IOBase, *, append=True):
+        if not isinstance(stream, io.IOBase):
+            raise TypeError(type(stream))
+        if not stream.readable():
+            raise ValueError('stream is unable to read.')
+        mode = 'a' if append else 'w'
+        if not isinstance(stream, io.TextIOBase):
+            mode += 'b'
+        return self.write(stream, mode=mode)
 
     def copy_to(self, dest, buffering: int = -1):
         '''
@@ -194,13 +231,25 @@ class FileInfo(NodeInfo):
 
     def read_text(self, encoding='utf-8') -> str:
         ''' read all text into memory. '''
-        with self.open('r', encoding=encoding) as fp:
+        with self.open_for_read_text(encoding=encoding) as fp:
             return fp.read()
 
     def read_bytes(self) -> bytes:
         ''' read all bytes into memory. '''
-        with self.open('rb') as fp:
+        with self.open_for_read_bytes() as fp:
             return fp.read()
+
+    def __iadd__(self, other: Union[str, bytes, bytearray, 'FileInfo']):
+        if isinstance(other, str):
+            self.write_text(other)
+        elif isinstance(other, (bytes, bytearray)):
+            self.write_bytes(other)
+        elif isinstance(other, FileInfo):
+            with other.open_for_read_bytes() as fp:
+                self.write_from_stream(fp)
+        else:
+            raise TypeError(type(other))
+        return self
 
     # override common methods
 
