@@ -17,6 +17,8 @@ from .paths import Path
 from .size import Size
 from .serialize import load, dump
 from .serialize_ctx import load_context, Context
+from .tree import ContentTree
+
 
 class NodeType(Enum):
     file = 1
@@ -430,15 +432,24 @@ class DirectoryInfo(NodeInfo):
 
     # tree api
 
-    def get_tree(self) -> dict:
+    def get_tree(self, *, as_stream=False) -> ContentTree:
         '''
         Get structure tree from current directory.
+
+        if `as_stream` is `True`,
+        collect all files as `file-object` instead of read entire file into memory,
+        you need to call `__exit__` after you used it.
         '''
-        tree = {}
+        tree = ContentTree()
         for item in self.list_items():
             name = str(item.path.name)
             if item.node_type == NodeType.file:
-                tree[name] = item.read(mode='rb')
+                if as_stream:
+                    fp = item.open_for_read_bytes()
+                    tree[name] = fp
+                    tree.enter(fp)
+                else:
+                    tree[name] = item.read(mode='rb')
             else:
                 tree[name] = item.get_tree()
         return tree
@@ -465,7 +476,7 @@ class DirectoryInfo(NodeInfo):
             if not isinstance(key, str):
                 raise TypeError(key)
 
-            if isinstance(value, (str, bytes)):
+            if isinstance(value, (str, bytes, bytearray, io.IOBase)):
                 subfile = self.get_fileinfo(key)
                 if subfile.is_file():
                     if mode == 0:
@@ -474,10 +485,15 @@ class DirectoryInfo(NodeInfo):
                         raise FileExistsError(subfile.path)
                     elif mode == 2:
                         subfile.delete()
+
                 if isinstance(value, str):
-                    subfile.write_text(value)
+                    subfile.write_text(value, append=False)
+
+                elif isinstance(value, (bytes, bytearray)):
+                    subfile.write_bytes(value, append=False)
+
                 else:
-                    subfile.write_bytes(value)
+                    subfile.write_from_stream(value, append=False)
 
             elif isinstance(value, dict):
                 subdir = self.get_dirinfo(key)

@@ -89,6 +89,41 @@ Or load:
 obj = FileInfo('a.json').load()
 ```
 
+### Directory
+
+You can use `fsoopify.DirectoryInfo(...)` to create a `DirectoryInfo` object and use directory api.
+
+#### tree Api
+
+The easiest way to batch read files:
+
+``` py
+DirectoryInfo(...).get_tree()
+# {
+#      filename: b'file content',
+#      sub_dirname: {
+#           ...
+#      }
+# }
+
+# to prevent load all file into memory:
+DirectoryInfo(...).get_tree(as_stream=True)
+```
+
+Or batch write files:
+
+``` py
+tree = {
+    'a.txt': b'abc',
+    'b.txt': b'cde',
+    'sub_dir': {
+        'e.txt': b'ddd'
+    }
+}
+DirectoryInfo(...).make_tree(tree)
+```
+
+
 ## Optional packages
 
 - `portalocker` - lock the file when calling `file.load_context()`
