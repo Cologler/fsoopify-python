@@ -239,6 +239,29 @@ class FileInfo(NodeInfo):
         with self.open_for_read_bytes() as fp:
             return fp.read()
 
+    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int = -1):
+        ''' read all content into stream. '''
+        if not isinstance(stream, io.IOBase):
+            raise TypeError(type(stream))
+        if not stream.writable():
+            raise ValueError('stream is unable to write.')
+
+        if buffering < 0:
+            buffering = io.DEFAULT_BUFFER_SIZE
+
+        if isinstance(stream, io.TextIOBase):
+            encoding = encoding or 'utf-8'
+            fp = self.open_for_read_text(encoding=encoding)
+        else:
+            fp = self.open_for_read_bytes()
+
+        with fp:
+            while True:
+                data = fp.read(buffering)
+                if not data:
+                    break
+                stream.write(data)
+
     def __iadd__(self, other: Union[str, bytes, bytearray, 'FileInfo']):
         if isinstance(other, str):
             self.write_text(other)

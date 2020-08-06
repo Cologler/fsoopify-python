@@ -8,6 +8,7 @@
 
 import os
 import tempfile
+import io
 
 from fsoopify import (
     NodeType,
@@ -30,6 +31,24 @@ def test_write_bytes():
         assert fi.read_bytes() == b'fnnuah'
         fi.write_bytes(b'd1s5a', append=True)
         assert fi.read_bytes() == b'fnnuahd1s5a'
+
+def test_read_into_stream():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+        assert not src.is_exists()
+        src.write_bytes(b'd1s5afajjmogjfwiughweuihgw')
+
+        dest = io.BytesIO()
+        src.read_into_stream(dest)
+        assert dest.getvalue() == b'd1s5afajjmogjfwiughweuihgw'
+
+        dest = io.BytesIO()
+        src.read_into_stream(dest, buffering=6)
+        assert dest.getvalue() == b'd1s5afajjmogjfwiughweuihgw'
+
+        dest = io.StringIO()
+        src.read_into_stream(dest)
+        assert dest.getvalue() == 'd1s5afajjmogjfwiughweuihgw'
 
 def test_iadd_str():
     with tempfile.TemporaryDirectory() as tmpdir:
