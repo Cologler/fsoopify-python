@@ -72,6 +72,17 @@ You can use `fsoopify.FileInfo(...)` to create a `FileInfo` object and use file 
 - `read_bytes()`
 - `read_into_stream()`
 
+And you can use `+=` for append data:
+
+``` py
+fi = FileInfo(...)
+fi += 'data'
+fi += b'data'
+fi += FileInfo(other_file)
+fi += io.BytesIO(b'data')
+...
+```
+
 #### serialize Api
 
 - `load()`
@@ -122,7 +133,6 @@ tree = {
 }
 DirectoryInfo(...).make_tree(tree)
 ```
-
 
 ## Optional packages
 
