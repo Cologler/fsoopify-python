@@ -264,11 +264,13 @@ class FileInfo(NodeInfo):
                     break
                 stream.write(data)
 
-    def __iadd__(self, other: Union[str, bytes, bytearray, 'FileInfo']):
+    def __iadd__(self, other: Union[str, bytes, bytearray, io.IOBase, 'FileInfo']):
         if isinstance(other, str):
             self.write_text(other)
         elif isinstance(other, (bytes, bytearray)):
             self.write_bytes(other)
+        elif isinstance(other, io.IOBase):
+            self.write_from_stream(other)
         elif isinstance(other, FileInfo):
             with other.open_for_read_bytes() as fp:
                 self.write_from_stream(fp)

@@ -72,6 +72,16 @@ def test_iadd_bytes():
         fi += bytearray(b'fhue')
         assert fi.read_bytes() == b'd1s5afdsaffhue'
 
+def test_iadd_stream():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+        assert not fi.is_exists()
+        fi += io.BytesIO(b'd1s5a')
+        assert fi.is_exists()
+        assert fi.read_bytes() == b'd1s5a'
+        fi += io.StringIO('fdsaf')
+        assert fi.read_bytes() == b'd1s5afdsaf'
+
 def test_iadd_file():
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
