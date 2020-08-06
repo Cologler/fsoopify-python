@@ -5,6 +5,7 @@
 #
 # ----------
 
+import sys
 from contextlib import contextmanager
 
 from .serialize import *
@@ -26,16 +27,28 @@ class Context:
 
     def __enter__(self):
         is_exists = self._file_info.is_file()
-        self._fp = self._file_info.open('r+b' if is_exists else 'wb')
-        self._lock_ctx = self._lock(self._file_info, self._fp)
-        self._lock_ctx.__enter__()
-        if is_exists:
-            self.data = self._serializer.loadf(self._fp, options={
-                'origin_kwargs': self._load_kwargs
-            })
-        else:
-            self.data = None
+        try:
+            self._fp = self._file_info.open('r+b' if is_exists else 'wb')
+            self._lock_ctx = self._lock(self._file_info, self._fp)
+            self._lock_ctx.__enter__()
+            if is_exists:
+                self.data = self._serializer.loadf(self._fp, options={
+                    'origin_kwargs': self._load_kwargs
+                })
+            else:
+                self.data = None
+        except Exception:
+            self._cleanup()
+            raise
         return self
+
+    def _cleanup(self):
+        if self._lock_ctx is not None:
+            self._lock_ctx.__exit__(*sys.exc_info())
+            self._lock_ctx = None
+        if self._fp is not None:
+            self._fp.close()
+            self._fp = None
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
@@ -56,12 +69,7 @@ class Context:
                 self._fp = None
 
         finally:
-            if self._lock_ctx is not None:
-                self._lock_ctx.__exit__(exc_type, exc_val, exc_tb)
-            if self._fp is not None:
-                # possible removed if data is None
-                self._fp.close()
-                self._fp = None
+            self._cleanup()
 
 @contextmanager
 def lock_with_nop(fi, fp):
