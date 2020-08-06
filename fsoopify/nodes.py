@@ -133,6 +133,11 @@ class NodeInfo(ABC):
         ''' create hardlink for the node. '''
         raise NotImplementedError
 
+    @abstractmethod
+    def create_symlink(self, dest_path: str):
+        ''' create symbolic link for the node. '''
+        raise NotImplementedError
+
 
 class FileInfo(NodeInfo):
 
@@ -300,6 +305,10 @@ class FileInfo(NodeInfo):
     def create_hardlink(self, dest_path: str):
         ''' create hardlink for the file. '''
         os.link(self._path, dest_path)
+
+    def create_symlink(self, dest_path: str):
+        ''' create symbolic link for the file. '''
+        os.symlink(self._path, dest_path, target_is_directory=False)
 
     # load/dump system.
 
@@ -534,3 +543,7 @@ class DirectoryInfo(NodeInfo):
         # child
         for item in self.list_items():
             item.create_hardlink(os.path.join(dest_path, item.path.name))
+
+    def create_symlink(self, dest_path: str):
+        ''' create symbolic link for the directory. '''
+        os.symlink(self._path, dest_path, target_is_directory=True)
