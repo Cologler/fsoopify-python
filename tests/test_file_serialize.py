@@ -6,6 +6,7 @@
 # ----------
 
 import tempfile
+import contextlib
 
 from pytest import raises
 
@@ -98,8 +99,32 @@ def test_load_context_with_locked():
             s.data = None
         assert not file_info.is_exists()
 
+def test_load_context_with_error():
+    data = example_data_1
+    name = 'test_load_context.json'
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dir_info = DirectoryInfo(tmpdir)
+        file_info = dir_info.get_fileinfo(name)
+        assert not file_info.is_exists()
+
+        with file_info.load_context(lock=True) as s:
+            assert s.data is None
+            s.data = data
+        assert file_info.is_exists()
+
+        with contextlib.suppress(ValueError):
+            with file_info.load_context(lock=True) as s:
+                assert s.data == data
+                s.data = {}
+                raise ValueError # raise any error
+
+        with file_info.load_context(lock=True) as s:
+            assert s.data == data # still not changes
+
+
 def test_pipfile():
     import pipfile
+    from fsoopify.serialize import NotSupportError
     assert FileInfo('Pipfile').load() == pipfile.load('Pipfile').data
-    with raises(NotImplementedError):
+    with raises(NotSupportError):
         FileInfo('Pipfile').dump({})

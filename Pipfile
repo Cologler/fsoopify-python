@@ -4,6 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+anyser = "*"
+portalocker = "*"
 
 [dev-packages]
 "json5" = "*"
@@ -12,4 +14,3 @@ toml = "*"
 pytest = "*"
 pipfile = "*"
 setupmeta-builder = "*"
-portalocker = "*"

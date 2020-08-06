@@ -68,3 +68,21 @@ def test_get_tree():
         dir_info.make_tree(tree)
 
         assert dir_info.get_tree() == tree
+
+def test_make_tree_with_stream():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tree = {
+            'a.txt': b'abc',
+            'b.txt': b'cde',
+            'subdir': {
+                'e.txt': b'ddd'
+            }
+        }
+        dir_info = DirectoryInfo(tmpdir)
+        dir_info.make_tree(tree)
+
+        with dir_info.get_tree(as_stream=True) as stree:
+            with tempfile.TemporaryDirectory() as tmpdir2:
+                dir_info_2 = DirectoryInfo(tmpdir2)
+                dir_info_2.make_tree(stree)
+                assert dir_info_2.get_tree() == tree

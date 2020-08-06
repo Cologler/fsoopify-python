@@ -8,13 +8,17 @@
 
 import sys
 import os
-from typing import Iterable, List, Any
+from typing import Iterable, List, Any, Union
 from abc import abstractmethod, ABC
 from enum import Enum
+import io
 
 from .paths import Path
 from .size import Size
-from .serialize import load, dump, get_serializer, serctx
+from .serialize import load, dump
+from .serialize_ctx import load_context, Context
+from .tree import ContentTree
+
 
 class NodeType(Enum):
     file = 1
@@ -117,6 +121,10 @@ class NodeInfo(ABC):
         '''
         return False
 
+    def is_symlink(self):
+        ''' get whether the node is a symbolic link node. '''
+        return os.path.islink(self._path)
+
     # abstract methods
 
     @abstractmethod
@@ -127,6 +135,11 @@ class NodeInfo(ABC):
     @abstractmethod
     def create_hardlink(self, dest_path: str):
         ''' create hardlink for the node. '''
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_symlink(self, dest_path: str):
+        ''' create symbolic link for the node. '''
         raise NotImplementedError
 
 
@@ -141,6 +154,14 @@ class FileInfo(NodeInfo):
                     newline=newline,
                     closefd=closefd)
 
+    def open_for_read_bytes(self, *, buffering=-1):
+        ''' open the file with read bytes mode. '''
+        return self.open('rb', buffering=buffering)
+
+    def open_for_read_text(self, *, encoding='utf-8'):
+        ''' open the file with read text mode. '''
+        return self.open('r', encoding=encoding)
+
     @property
     def size(self):
         ''' get file size. '''
@@ -149,12 +170,30 @@ class FileInfo(NodeInfo):
     def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None):
         ''' write data into the file. '''
         if mode is None:
-            mode = 'w' if isinstance(data, str) else 'wb'
+            if isinstance(data, (str, io.TextIOBase)):
+                mode = 'w'
+            elif isinstance(data, (bytes, bytearray, io.BufferedIOBase)):
+                mode = 'wb'
+            else:
+                raise TypeError(type(data))
+
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
-            return fp.write(data)
+            if isinstance(data, (str, bytes, bytearray)):
+                return fp.write(data)
+            else:
+                read_buffering = buffering
+                if read_buffering < 2:
+                    read_buffering = io.DEFAULT_BUFFER_SIZE
+                total = 0
+                while True:
+                    b = data.read(read_buffering)
+                    if not b:
+                        break
+                    total += fp.write(b)
+                return total
 
     def read(self, mode='r', *, buffering=-1, encoding=None, newline=None):
-        ''' read data from the file. '''
+        ''' read all content from the file. '''
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
 
@@ -163,10 +202,20 @@ class FileInfo(NodeInfo):
         mode = 'a' if append else 'w'
         return self.write(text, mode=mode, encoding=encoding)
 
-    def write_bytes(self, data: bytes, *, append=True):
+    def write_bytes(self, data: Union[bytes, bytearray], *, append=True):
         ''' write bytes into the file. '''
         mode = 'ab' if append else 'wb'
         return self.write(data, mode=mode)
+
+    def write_from_stream(self, stream: io.IOBase, *, append=True):
+        if not isinstance(stream, io.IOBase):
+            raise TypeError(type(stream))
+        if not stream.readable():
+            raise ValueError('stream is unable to read.')
+        mode = 'a' if append else 'w'
+        if not isinstance(stream, io.TextIOBase):
+            mode += 'b'
+        return self.write(stream, mode=mode)
 
     def copy_to(self, dest, buffering: int = -1):
         '''
@@ -193,13 +242,50 @@ class FileInfo(NodeInfo):
 
     def read_text(self, encoding='utf-8') -> str:
         ''' read all text into memory. '''
-        with self.open('r', encoding=encoding) as fp:
+        with self.open_for_read_text(encoding=encoding) as fp:
             return fp.read()
 
     def read_bytes(self) -> bytes:
         ''' read all bytes into memory. '''
-        with self.open('rb') as fp:
+        with self.open_for_read_bytes() as fp:
             return fp.read()
+
+    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int = -1):
+        ''' read all content into stream. '''
+        if not isinstance(stream, io.IOBase):
+            raise TypeError(type(stream))
+        if not stream.writable():
+            raise ValueError('stream is unable to write.')
+
+        if buffering < 0:
+            buffering = io.DEFAULT_BUFFER_SIZE
+
+        if isinstance(stream, io.TextIOBase):
+            encoding = encoding or 'utf-8'
+            fp = self.open_for_read_text(encoding=encoding)
+        else:
+            fp = self.open_for_read_bytes()
+
+        with fp:
+            while True:
+                data = fp.read(buffering)
+                if not data:
+                    break
+                stream.write(data)
+
+    def __iadd__(self, other: Union[str, bytes, bytearray, io.IOBase, 'FileInfo']):
+        if isinstance(other, str):
+            self.write_text(other)
+        elif isinstance(other, (bytes, bytearray)):
+            self.write_bytes(other)
+        elif isinstance(other, io.IOBase):
+            self.write_from_stream(other)
+        elif isinstance(other, FileInfo):
+            with other.open_for_read_bytes() as fp:
+                self.write_from_stream(fp)
+        else:
+            raise TypeError(type(other))
+        return self
 
     # override common methods
 
@@ -224,6 +310,10 @@ class FileInfo(NodeInfo):
         ''' create hardlink for the file. '''
         os.link(self._path, dest_path)
 
+    def create_symlink(self, dest_path: str):
+        ''' create symbolic link for the file. '''
+        os.symlink(self._path, dest_path, target_is_directory=False)
+
     # load/dump system.
 
     def load(self, format=None, *, kwargs={}):
@@ -247,14 +337,14 @@ class FileInfo(NodeInfo):
         '''
         return dump(self, obj, format=format, kwargs=kwargs)
 
-    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}, lock=False):
+    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}, lock=False) -> Context:
         '''
         load the file in a context, auto dump `context.data` into file when context exit.
 
         - if the file does not exists, `context.data` will be `None`.
         - set `context.data` to `None` will remove the file from disk.
         - by default, `context.save_on_exit` is `True`.
-        - if `lock` is `True`, lock the file until the context exit. (`lock` require install package `portalocker`)
+        - if `lock` is `True`, lock the file until the context exit.
 
         usage:
 
@@ -264,11 +354,7 @@ class FileInfo(NodeInfo):
             ...
         ```
         '''
-        if lock:
-            context = _LockedDataContext(self, format, load_kwargs, dump_kwargs)
-        else:
-            context = _DataContext(self, format, load_kwargs, dump_kwargs)
-        return context
+        return load_context(self, format, load_kwargs=load_kwargs, dump_kwargs=dump_kwargs, lock=lock)
 
     # hash system
 
@@ -361,15 +447,24 @@ class DirectoryInfo(NodeInfo):
 
     # tree api
 
-    def get_tree(self) -> dict:
+    def get_tree(self, *, as_stream=False) -> ContentTree:
         '''
         Get structure tree from current directory.
+
+        if `as_stream` is `True`,
+        collect all files as `file-object` instead of read entire file into memory,
+        you need to call `__exit__` after you used it.
         '''
-        tree = {}
+        tree = ContentTree()
         for item in self.list_items():
             name = str(item.path.name)
             if item.node_type == NodeType.file:
-                tree[name] = item.read(mode='rb')
+                if as_stream:
+                    fp = item.open_for_read_bytes()
+                    tree[name] = fp
+                    tree.enter(fp)
+                else:
+                    tree[name] = item.read(mode='rb')
             else:
                 tree[name] = item.get_tree()
         return tree
@@ -396,7 +491,7 @@ class DirectoryInfo(NodeInfo):
             if not isinstance(key, str):
                 raise TypeError(key)
 
-            if isinstance(value, (str, bytes)):
+            if isinstance(value, (str, bytes, bytearray, io.IOBase)):
                 subfile = self.get_fileinfo(key)
                 if subfile.is_file():
                     if mode == 0:
@@ -405,10 +500,15 @@ class DirectoryInfo(NodeInfo):
                         raise FileExistsError(subfile.path)
                     elif mode == 2:
                         subfile.delete()
+
                 if isinstance(value, str):
-                    subfile.write_text(value)
+                    subfile.write_text(value, append=False)
+
+                elif isinstance(value, (bytes, bytearray)):
+                    subfile.write_bytes(value, append=False)
+
                 else:
-                    subfile.write_bytes(value)
+                    subfile.write_from_stream(value, append=False)
 
             elif isinstance(value, dict):
                 subdir = self.get_dirinfo(key)
@@ -448,86 +548,6 @@ class DirectoryInfo(NodeInfo):
         for item in self.list_items():
             item.create_hardlink(os.path.join(dest_path, item.path.name))
 
-
-class _DataContext:
-    def __init__(self, file: FileInfo, format, load_kwargs: dict, dump_kwargs: dict):
-        self._data = None
-        self.save_on_exit = True
-        self._file = file
-        self._format = format
-        self._serializer = get_serializer(file, format)
-        self._load_kwargs = load_kwargs
-        self._dump_kwargs = dump_kwargs
-
-        self._on_load()
-
-    def _loadb(self, s: bytes):
-        with serctx():
-            return self._serializer.loadb(s, self._load_kwargs)
-
-    def _dumpb(self) -> bytes:
-        with serctx():
-            return self._serializer.dumpb(self.data, kwargs=self._dump_kwargs)
-
-    def _on_load(self):
-        if self._file.is_file():
-            self._data = self._loadb(self._file.read_bytes())
-        else:
-            self._data = None
-
-    def _on_dump(self):
-        if self.data is None:
-            if self._file.is_file():
-                self._file.delete()
-        else:
-            self._file.dump(self.data, self._format, kwargs=self._dump_kwargs)
-
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        self._data = value
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_):
-        if self.save_on_exit:
-            self.save()
-
-    def save(self):
-        self._on_dump()
-
-
-class _LockedDataContext(_DataContext):
-    def __init__(self, file, format, load_kwargs, dump_kwargs):
-        import portalocker
-        self.portalocker = portalocker
-        self._fp = None
-        super().__init__(file, format, load_kwargs, dump_kwargs)
-
-    def _on_load(self):
-        is_exists = self._file.is_file()
-        if is_exists:
-            mode = 'r+b'
-        else:
-            mode = 'wb'
-        self._fp = self._file.open(mode)
-        self.portalocker.lock(self._fp, self.portalocker.LOCK_EX)
-        if is_exists:
-            self._data = self._loadb(self._fp.read())
-
-    def _on_dump(self):
-        if self.data is not None:
-            buf = self._dumpb()
-            self._fp.seek(0)
-            self._fp.write(buf)
-            self._fp.truncate()
-            self._fp.close()
-
-        else:
-            self._fp.close()
-            if self._file.is_file():
-                self._file.delete()
+    def create_symlink(self, dest_path: str):
+        ''' create symbolic link for the directory. '''
+        os.symlink(self._path, dest_path, target_is_directory=True)
