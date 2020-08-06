@@ -121,6 +121,10 @@ class NodeInfo(ABC):
         '''
         return False
 
+    def is_symlink(self):
+        ''' get whether the node is a symbolic link node. '''
+        return os.path.islink(self._path)
+
     # abstract methods
 
     @abstractmethod
