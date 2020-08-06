@@ -29,13 +29,6 @@ file.delete()
 file.create_hardlink()
 
 # api for file
-file.open()
-file.size
-file.read() and file.write()
-file.read_text() and file.write_text()
-file.read_bytes() and file.write_bytes()
-file.copy_to()
-file.load() and file.dump() # I love this API
 file.load_context() # load and dump the file in a context.
 
 # api for directory
@@ -47,10 +40,59 @@ directory.get_fileinfo() and directory.get_dirinfo()
 directory.has_file() and directory.has_directory()
 ```
 
+## Api
+
+### File
+
+You can use `fsoopify.FileInfo(...)` to create a `FileInfo` object and use file api.
+
+### property
+
+- `size`
+
+### test Api
+
+- `is_exists()`
+- `is_file()`
+
+#### open Api
+
+- `open()` - alias for builtin `open`
+- `open_for_read_bytes()`
+- `open_for_read_text()`
+
+#### read / write Api
+
+- `write()`
+- `write_text()`
+- `write_bytes()`
+- `write_from_stream()`
+- `read()`
+- `read_text()`
+- `read_bytes()`
+- `read_into_stream()`
+
+#### serialize Api
+
+- `load()`
+- `dump()`
+
+The easiest way to dump a json:
+
+``` py
+FileInfo('a.json').dump(the_obj_to_dump)
+```
+
+Or load:
+
+``` py
+obj = FileInfo('a.json').load()
+```
+
 ## Optional packages
 
-* `portalocker` - lock the file when calling `file.load_context()`
-* `json5` - load or dump json5 file
-* `pyyaml` - load or dump yaml file
-* `toml` - load or dump toml file
-* `pipfile` - load pipfile
+- `portalocker` - lock the file when calling `file.load_context()`
+- `json5` - load or dump json5 file
+- `pyyaml` - load or dump yaml file
+- `toml` - load or dump toml file
+- `pipfile` - load pipfile
