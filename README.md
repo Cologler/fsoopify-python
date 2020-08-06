@@ -46,11 +46,11 @@ directory.has_file() and directory.has_directory()
 
 You can use `fsoopify.FileInfo(...)` to create a `FileInfo` object and use file api.
 
-### property
+#### property
 
 - `size`
 
-### test Api
+#### test Api
 
 - `is_exists()`
 - `is_file()`
