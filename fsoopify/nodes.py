@@ -366,8 +366,14 @@ class FileInfo(NodeInfo):
 
         for example: `get_file_hash('md5', 'sha1')` return `('XXXX1', 'XXXX2')`
         '''
-        from .hashs import hashfile_hexdigest
-        return hashfile_hexdigest(self._path, algorithms)
+        with self.get_hasher(*algorithms) as hasher:
+            while hasher.read_block():
+                pass
+            return hasher.result
+
+    def get_hasher(self, *algorithms: str):
+        from .hashs import Hasher
+        return Hasher(self._path, algorithms)
 
 
 class DirectoryInfo(NodeInfo):

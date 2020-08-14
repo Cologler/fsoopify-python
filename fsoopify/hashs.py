@@ -5,6 +5,7 @@
 #
 # ----------
 
+from typing import *
 import binascii
 import hashlib
 
@@ -26,16 +27,69 @@ def _create(algorithm: str):
         return Crc32Proxy()
     return hashlib.new(algorithm)
 
-def hashfile_hexdigest(path: str, algorithms: tuple, *, blocksize=1024 * 64):
-    for algorithm in algorithms:
-        if not algorithm in ALGORITHMS:
-            raise ValueError(f'unsupport algorithm: {algorithm}')
-    ms = [_create(x) for x in algorithms]
-    with open(path, 'rb') as stream:
-        while True:
-            buffer = stream.read(blocksize)
-            if not buffer:
-                break
-            for m in ms:
+class Hasher:
+    def __init__(self, path: str, algorithms: Tuple[str, ...], *, blocksize=1024 * 64):
+        for algorithm in algorithms:
+            if not algorithm in ALGORITHMS:
+                raise ValueError(f'unsupport algorithm: {algorithm}')
+
+        self._path = path
+        self._algorithms = algorithms
+        self._blocksize = blocksize
+        self._result = None
+        self._total_read = 0
+
+        # lazy init:
+        self._total_size = None
+        self._stream = None
+        self._hashers = None
+
+    def __enter__(self):
+        self._stream = open(self._path, 'rb')
+        self._hashers = [_create(x) for x in self._algorithms]
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._stream.close()
+
+    def read_block(self) -> bool:
+        if self._result is not None:
+            return False
+
+        buffer = self._stream.read(self._blocksize)
+        if buffer:
+            self._total_read += len(buffer)
+            for m in self._hashers:
                 m.update(buffer)
-    return tuple(m.hexdigest() for m in ms)
+        else:
+            self._result = tuple(m.hexdigest() for m in self._hashers)
+
+        return True
+
+    @property
+    def total_read(self):
+        return self._total_read
+
+    @property
+    def total_size(self):
+        if self._total_size is None:
+            import os
+            self._total_size = os.path.getsize(self._path)
+        return self._total_size
+
+    @property
+    def progress(self):
+        return self._total_read / self._total_size
+
+    @property
+    def result(self) -> Tuple[str, ...]:
+        if self._result is None:
+            raise RuntimeError
+        return self._result
+
+
+def hashfile_hexdigest(path: str, algorithms: tuple, *, blocksize=1024 * 64):
+    with Hasher(path, algorithms, blocksize=blocksize) as hc:
+        while hc.read_block():
+            pass
+        return hc.result
