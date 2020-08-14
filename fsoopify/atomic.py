@@ -7,10 +7,32 @@
 
 import io
 import shutil
+import types
 
 import atomicwrites
 
-class AtomicWriterProxy:
+class _ProxyDescriptor:
+    def __init__(self, name=None):
+        self._name = name
+
+    def __get__(self, obj, cls=None):
+        return getattr(obj.__io, self._name)
+
+    def __set__(self, obj, value) -> None:
+        pass
+
+    def __delete__(self, obj) -> None:
+        # if an object defines `__set__()` or `__delete__()`,
+        # it is considered a data descriptor.
+        pass
+
+    def __set_name__(self, owner_cls, name):
+        # New in version 3.6
+        # only called implicitly as part of the type constructor
+        self._name = name
+
+
+class IOProxyBase:
     def __init__(self, gen):
         self.__gen = gen
         self.__io = gen.__enter__()
@@ -23,6 +45,20 @@ class AtomicWriterProxy:
 
     def __getattr__(self, name):
         return getattr(self.__io, name)
+
+    __iter__ = _ProxyDescriptor()
+
+for name in set(dir(io.TextIOWrapper)) | set(dir(io.BufferedRandom)):
+    if not name.startswith('__'):
+        setattr(IOProxyBase, name, _ProxyDescriptor(name))
+
+
+class BufferedIOProxy(IOProxyBase, io.BufferedIOBase):
+    pass
+
+
+class TextIOProxy(IOProxyBase, io.TextIOBase):
+    pass
 
 
 def open_atomic(path: str, mode : str, **kwargs):
@@ -39,7 +75,10 @@ def open_atomic(path: str, mode : str, **kwargs):
     dest = atomicwrites.atomic_write(path, mode=atomic_mode,
         overwrite=overwrite,
         **kwargs)
-    dest = AtomicWriterProxy(dest)
+    if 'b' in mode:
+        dest = BufferedIOProxy(dest)
+    else:
+        dest = TextIOProxy(dest)
 
     try:
         if 'w' not in mode:
