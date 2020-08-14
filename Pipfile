@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 anyser = "*"
 portalocker = "*"
+atomicwrites = "*"
+filelock = "*"
 
 [dev-packages]
 "json5" = "*"

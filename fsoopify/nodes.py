@@ -18,6 +18,7 @@ from .size import Size
 from .serialize import load, dump
 from .serialize_ctx import load_context, Context
 from .tree import ContentTree
+from .atomic import open_atomic
 
 
 class NodeType(Enum):
@@ -145,14 +146,22 @@ class NodeInfo(ABC):
 
 class FileInfo(NodeInfo):
 
-    def open(self, mode='r', *, buffering=-1, encoding=None, newline=None, closefd=True):
+    def open(self, mode='r', *,
+             buffering=-1, encoding=None, newline=None, closefd=True,
+             atomic=False):
         ''' open the file. '''
-        return open(self._path,
-                    mode=mode,
-                    buffering=buffering,
-                    encoding=encoding,
-                    newline=newline,
-                    closefd=closefd)
+
+        kwargs = dict(
+            buffering=buffering,
+            encoding=encoding,
+            newline=newline,
+            closefd=closefd
+        )
+
+        if not atomic:
+            return open(self._path, mode=mode, **kwargs)
+        else:
+            return open_atomic(self._path, mode=mode, **kwargs)
 
     def open_for_read_bytes(self, *, buffering=-1):
         ''' open the file with read bytes mode. '''
@@ -167,7 +176,7 @@ class FileInfo(NodeInfo):
         ''' get file size. '''
         return Size(os.path.getsize(self.path))
 
-    def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None):
+    def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None, atomic=False):
         ''' write data into the file. '''
         if mode is None:
             if isinstance(data, (str, io.TextIOBase)):
@@ -177,7 +186,7 @@ class FileInfo(NodeInfo):
             else:
                 raise TypeError(type(data))
 
-        with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
+        with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline, atomic=atomic) as fp:
             if isinstance(data, (str, bytes, bytearray)):
                 return fp.write(data)
             else:
@@ -197,17 +206,17 @@ class FileInfo(NodeInfo):
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
 
-    def write_text(self, text: str, *, encoding='utf-8', append=True):
+    def write_text(self, text: str, *, encoding='utf-8', append=True, atomic=False):
         ''' write text into the file. '''
         mode = 'a' if append else 'w'
-        return self.write(text, mode=mode, encoding=encoding)
+        return self.write(text, mode=mode, encoding=encoding, atomic=atomic)
 
-    def write_bytes(self, data: Union[bytes, bytearray], *, append=True):
+    def write_bytes(self, data: Union[bytes, bytearray], *, append=True, atomic=False):
         ''' write bytes into the file. '''
         mode = 'ab' if append else 'wb'
-        return self.write(data, mode=mode)
+        return self.write(data, mode=mode, atomic=atomic)
 
-    def write_from_stream(self, stream: io.IOBase, *, append=True):
+    def write_from_stream(self, stream: io.IOBase, *, append=True, atomic=False):
         if not isinstance(stream, io.IOBase):
             raise TypeError(type(stream))
         if not stream.readable():
@@ -215,7 +224,7 @@ class FileInfo(NodeInfo):
         mode = 'a' if append else 'w'
         if not isinstance(stream, io.TextIOBase):
             mode += 'b'
-        return self.write(stream, mode=mode)
+        return self.write(stream, mode=mode, atomic=atomic)
 
     def copy_to(self, dest, buffering: int = -1):
         '''
@@ -328,7 +337,7 @@ class FileInfo(NodeInfo):
         '''
         return load(self, format=format, kwargs=kwargs)
 
-    def dump(self, obj, format=None, *, kwargs={}):
+    def dump(self, obj, format=None, *, kwargs={}, atomic=True):
         '''
         serialize the `obj` into file.
 
@@ -337,7 +346,7 @@ class FileInfo(NodeInfo):
         '''
         return dump(self, obj, format=format, kwargs=kwargs)
 
-    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}, lock=False) -> Context:
+    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}, lock=False, atomic=True) -> Context:
         '''
         load the file in a context, auto dump `context.data` into file when context exit.
 
@@ -354,7 +363,7 @@ class FileInfo(NodeInfo):
             ...
         ```
         '''
-        return load_context(self, format, load_kwargs=load_kwargs, dump_kwargs=dump_kwargs, lock=lock)
+        return load_context(self, format, load_kwargs=load_kwargs, dump_kwargs=dump_kwargs, lock=lock, atomic=atomic)
 
     # hash system
 

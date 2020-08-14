@@ -21,12 +21,12 @@ def load(file_info, format=None, *, kwargs={}):
             'origin_kwargs': kwargs.copy()
         })
 
-def dump(file_info, obj, format=None, *, kwargs={}):
+def dump(file_info, obj, format=None, *, kwargs={}, atomic=False):
     serializer = get_serializer(file_info, format)
     data = serializer.dumpb(obj, options={
         'origin_kwargs': kwargs.copy()
     })
-    file_info.write_bytes(data, append=False)
+    file_info.write_bytes(data, append=False, atomic=atomic)
 
 def get_serializer(file_info, format: Optional[str]):
     if not isinstance(format, (str, type(None))):
