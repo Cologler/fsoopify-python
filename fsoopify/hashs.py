@@ -79,7 +79,7 @@ class Hasher:
 
     @property
     def progress(self):
-        return self._total_read / self._total_size
+        return self._total_read / self.total_size
 
     @property
     def result(self) -> Tuple[str, ...]:
