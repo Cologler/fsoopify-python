@@ -15,6 +15,16 @@ from fsoopify import Path
 on_win = pytest.mark.skipif(os.name != 'nt', reason="only run on windows")
 on_unix = pytest.mark.skipif(os.name == 'nt', reason="only run on unix")
 
+def test_is_abspath():
+    abspath = Path.from_argv()
+    assert abspath.is_abspath()
+    assert abspath == sys.argv[0]
+    assert abspath is abspath.get_abspath()
+
+    relpath = Path('abc') # rel path
+    assert relpath.get_abspath().is_abspath()
+    assert relpath.get_abspath() == os.path.abspath('abc')
+
 def test_abspath_get_parent():
     path = Path.from_argv(0)
     parent = path.get_parent()

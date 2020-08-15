@@ -13,6 +13,9 @@ import pytest
 
 from fsoopify import Path
 
+on_win = pytest.mark.skipif(os.name != 'nt', reason="only run on windows")
+on_unix = pytest.mark.skipif(os.name == 'nt', reason="only run on unix")
+
 NT = sys.platform == 'win32'
 
 def get_path_from_argv_0():
@@ -33,7 +36,7 @@ def test_path_equals():
     assert path == path_str
     assert path_str == path
 
-@pytest.mark.skipif(not NT, reason="only run on windows")
+@on_win
 def test_path_equals_on_win32():
     # ignore case
     for l, r in itertools.product(['c:', 'C:'], repeat=2):
@@ -43,8 +46,6 @@ def test_path_equals_on_win32():
     for l, r in itertools.product(['c:\\', 'C:'], repeat=2):
         assert Path(l) == Path(r)
 
-@pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
-def test_path_equals_without_case():
     path_str, path = get_path_from_argv_0()
     assert path == path_str.upper()
     assert path == path_str.lower()
@@ -65,16 +66,6 @@ def test_is_abspath():
     assert Path('c:').is_abspath() == NT
     assert Path('c:\\').is_abspath() == NT
     assert Path('c://').is_abspath() == NT
-
-def test_abspath():
-    path_str, path = get_path_from_argv_0()
-    assert path.get_abspath().is_abspath()
-    assert path.get_abspath() == os.path.abspath(path_str)
-
-    path_str = 's'
-    path = Path(path_str)
-    assert path.get_abspath().is_abspath()
-    assert path.get_abspath() == os.path.abspath(path_str)
 
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
 def test_abspath_with_root_on_win32():
