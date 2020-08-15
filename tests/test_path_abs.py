@@ -29,6 +29,12 @@ def test_get_abspath():
     assert abspath is abspath.get_abspath()
 
 @on_win
+def test_get_relpath_nt():
+    abspath = Path(r'c:\a\x')
+    assert abspath.get_relpath('c:\\a') == 'x'
+    assert abspath.get_relpath('c:\\a\\') == 'x'
+
+@on_win
 def test_is_abspath_on_win():
     assert Path('c:').is_abspath()
     assert Path('c:\\').is_abspath()

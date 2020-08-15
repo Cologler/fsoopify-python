@@ -56,6 +56,8 @@ class PathComponent(str):
         return '{}(\'{}\')'.format(type(self).__name__, self)
 
     def __eq__(self, other):
+        if other is self:
+            return True
         if isinstance(other, PathComponent):
             return self.normalcase == other.normalcase
         if isinstance(other, str):
@@ -264,7 +266,12 @@ class Path(PathComponent):
         raise NotImplementedError
 
     def get_abspath(self):
-        raise NotImplementedError
+        'get the absolute version of a path'
+        return _AbsPath(os.path.abspath(self))
+
+    def get_relpath(self, rel_to=None):
+        'get the relative version of the path'
+        return _RelPath(os.path.relpath(self, rel_to))
 
 
 class _AbsPath(Path):
@@ -360,5 +367,7 @@ class _RelPath(Path):
     def is_abspath(self):
         return False
 
-    def get_abspath(self):
-        return _AbsPath(os.path.abspath(self))
+    def get_relpath(self, rel_to=None):
+        if rel_to in (None, os.path.curdir):
+            return self
+        return super().get_relpath(rel_to)

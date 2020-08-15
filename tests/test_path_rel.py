@@ -24,6 +24,14 @@ def test_get_abspath():
     assert abspath.is_abspath()
     assert abspath == os.path.abspath('abc')
 
+def test_get_relpath():
+    relpath = Path('abc')
+    assert relpath.get_relpath() is relpath
+    assert relpath.get_relpath(os.path.curdir) == relpath
+    cwd = os.getcwd()
+    pardir = os.path.basename(cwd)
+    assert relpath.get_relpath(os.path.pardir) == os.path.join(pardir, 'abc')
+
 def test_relpath_get_parent_when_root_is_dir():
     src_path = os.path.join('a', 'b', 'c')
     path = Path(src_path)
