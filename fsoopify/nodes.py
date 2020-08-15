@@ -164,6 +164,10 @@ class FileInfo(NodeInfo):
             return open_atomic(self._path, mode=mode, **kwargs)
 
     def open_or_create(self, mode='r', **kwargs):
+        '''
+        open or create the file atomic.
+        '''
+
         if 'a' in mode or 'w' in mode or 'x' in mode:
             # such mode auto create the file if does not exists,
             # so we did not need to override it.
