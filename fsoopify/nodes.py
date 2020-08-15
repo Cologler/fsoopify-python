@@ -174,7 +174,7 @@ class FileInfo(NodeInfo):
         else:
             return open_atomic(self._path, mode=mode, **kwargs)
 
-    def open_or_create(self, mode='r', **kwargs):
+    def open_or_create(self, mode='r', *, lock=False, atomic=False, **kwargs):
         '''
         open or create the file atomic.
         '''
@@ -184,26 +184,26 @@ class FileInfo(NodeInfo):
             # so we did not need to override it.
             return self.open(mode, **kwargs)
 
-        if os.path.exists(self._path):
-            try:
-                return self.open(mode, **kwargs)
-            except FileNotFoundError:
-                # file maybe removed after syscall os.path.exists.
-                pass
+        # all cases ('rt', 'rb', 'r+t' or 'r+b')
+        if atomic:
+            if '+' not in mode:
+                mode += '+' # 'r+t' or 'r+b'
+            return open_atomic(self._path, mode=mode, **kwargs)
 
         else:
-            # for all cases ('rt', 'rb', 'r+t' or 'r+b'):
-            # - always be readable
-            create_mode = 'x+' # ensure not overwrite.
-            if 'b' in mode:
-                create_mode += 'b'
+            open_flags = os.O_RDWR | os.O_CREAT
+            fd = os.open(self._path, open_flags)
+            fp = None
             try:
-                return self.open(create_mode, **kwargs)
-            except FileExistsError:
-                # file maybe created from another syscall.
-                pass
-
-        return self.open_or_create(mode, **kwargs)
+                fp = os.fdopen(fd, mode, **kwargs)
+                if lock:
+                    portalocker.lock(fp, portalocker.LOCK_EX)
+            except Exception:
+                if fp:
+                    fp.close()
+                os.close(fd)
+                raise
+            return fp
 
     def open_for_read_bytes(self, *, buffering=-1):
         ''' open the file with read bytes mode. '''

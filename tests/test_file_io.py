@@ -14,12 +14,11 @@ import pytest
 
 from fsoopify import *
 
-lock_atomic_params = (
-    'lock, atomic',
-    list(itertools.product([True, False], repeat=2))
-)
+param_lock = pytest.mark.parametrize("lock", [True, False])
+param_atomic = pytest.mark.parametrize("atomic", [True, False])
 
-@pytest.mark.parametrize(*lock_atomic_params)
+@param_lock
+@param_atomic
 def test_open_text(lock, atomic):
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
@@ -41,7 +40,8 @@ def test_open_text(lock, atomic):
             assert fp.write('fwq523')
         assert fi.read_text() == 'dsjai' + 'fwq523'
 
-@pytest.mark.parametrize(*lock_atomic_params)
+@param_lock
+@param_atomic
 def test_open_text_rw(lock, atomic):
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
@@ -73,7 +73,8 @@ def test_open_text_rw(lock, atomic):
             assert fp.write('fwq523')
         assert fi.read_text() == 'd' + 'fwq523'
 
-@pytest.mark.parametrize(*lock_atomic_params)
+@param_lock
+@param_atomic
 def test_open_bytes(lock, atomic):
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
@@ -95,7 +96,8 @@ def test_open_bytes(lock, atomic):
             assert fp.write(b'fwq523')
         assert fi.read_bytes() == b'dsjai' + b'fwq523'
 
-@pytest.mark.parametrize(*lock_atomic_params)
+@param_lock
+@param_atomic
 def test_open_bytes_rw(lock, atomic):
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
@@ -127,39 +129,43 @@ def test_open_bytes_rw(lock, atomic):
             assert fp.write(b'fwq523')
         assert fi.read_bytes() == b'd' + b'fwq523'
 
-def test_open_or_create_text():
+@param_lock
+@param_atomic
+def test_open_or_create_text(lock, atomic):
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
         assert not fi.is_file()
         with pytest.raises(FileNotFoundError):
             with fi.open('r+'):
                 pass
-        with fi.open_or_create('r+') as fp:
+        with fi.open_or_create('r+', lock=lock, atomic=atomic) as fp:
             fp.write('123')
             fp.seek(0)
             assert fp.read() == '123'
         with pytest.raises(FileExistsError):
             with fi.open('x+'):
                 pass
-        with fi.open_or_create('r+') as fp:
+        with fi.open_or_create('r+', lock=lock, atomic=atomic) as fp:
             assert fp.read() == '123'
         assert fi.read_text() == '123'
 
-def test_open_or_create_bytes():
+@param_lock
+@param_atomic
+def test_open_or_create_bytes(lock, atomic):
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
         assert not fi.is_file()
         with pytest.raises(FileNotFoundError):
             with fi.open('r+b'):
                 pass
-        with fi.open_or_create('r+b') as fp:
+        with fi.open_or_create('r+b', lock=lock, atomic=atomic) as fp:
             fp.write(b'123')
             fp.seek(0)
             assert fp.read() == b'123'
         with pytest.raises(FileExistsError):
             with fi.open('x+'):
                 pass
-        with fi.open_or_create('r+b') as fp:
+        with fi.open_or_create('r+b', lock=lock, atomic=atomic) as fp:
             assert fp.read() == b'123'
         assert fi.read_bytes() == b'123'
 
