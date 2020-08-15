@@ -13,6 +13,8 @@ from abc import abstractmethod, ABC
 from enum import Enum
 import io
 
+import portalocker
+
 from .paths import Path
 from .size import Size
 from .serialize import load, dump
@@ -148,8 +150,13 @@ class FileInfo(NodeInfo):
 
     def open(self, mode='r', *,
              buffering=-1, encoding=None, newline=None, closefd=True,
-             atomic=False):
-        ''' open the file. '''
+             lock=False, atomic=False):
+        '''
+        open the file.
+
+        - when `lock` set `True`, use `portalocker.lock(LOCK_EX)` to lock the file after it opened.
+        - when `atomic` set `True`, read or write as atomic operations.
+        '''
 
         kwargs = dict(
             buffering=buffering,
@@ -159,7 +166,10 @@ class FileInfo(NodeInfo):
         )
 
         if not atomic:
-            return open(self._path, mode=mode, **kwargs)
+            fp = open(self._path, mode=mode, **kwargs)
+            if lock:
+                portalocker.lock(fp, portalocker.LOCK_EX)
+            return fp
         else:
             return open_atomic(self._path, mode=mode, **kwargs)
 

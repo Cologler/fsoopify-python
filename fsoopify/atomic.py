@@ -39,20 +39,29 @@ class IOProxyBase:
     def __init__(self, gen):
         self._gen = gen
         self._baseio = gen.__enter__()
+        self._append_mode = False # for append mode
 
     def __enter__(self):
-        return self._baseio
-
-    def getio(self):
-        return self._baseio
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._gen.__exit__(exc_type, exc_val, exc_tb)
 
+    def write(self, *args, **kwargs):
+        pos = None
+        if self._append_mode and  self._baseio.seekable():
+            pos = self._baseio.tell()
+            self._baseio.seek(0, io.SEEK_END)
+        try:
+            return self._baseio.write(*args, **kwargs)
+        finally:
+            if pos is not None:
+                self._baseio.seek(pos)
+
     __iter__ = _ProxyDescriptor()
 
 for name in set(dir(io.TextIOWrapper)) | set(dir(io.BufferedRandom)):
-    if not name.startswith('__'):
+    if not name.startswith('__') and not hasattr(IOProxyBase, name):
         setattr(IOProxyBase, name, _ProxyDescriptor(name))
 
 
@@ -72,7 +81,7 @@ def open_atomic(path: str, mode : str, **kwargs):
     overwrite = 'x' not in mode
 
     atomic_mode = 'w'
-    if 'w' not in mode:
+    if '+' in mode or 'w' not in mode:
         atomic_mode += '+'
     if 'b' in mode:
         atomic_mode += 'b'
@@ -85,7 +94,7 @@ def open_atomic(path: str, mode : str, **kwargs):
         dest = TextIOProxy(dest)
 
     try:
-        if 'w' not in mode:
+        if 'w' not in mode and 'x' not in mode:
             if os.path.isfile(path):
                 with contextlib.suppress(FileNotFoundError):
                     # read+write or append
@@ -96,7 +105,9 @@ def open_atomic(path: str, mode : str, **kwargs):
                         portalocker.lock(reader, portalocker.LOCK_EX) # ensure file not change when we clone.
                         shutil.copyfileobj(reader, dest)
 
-                if 'a' not in mode:
+                if 'a' in mode:
+                    dest._append_mode = True
+                else:
                     # read+write
                     dest.seek(0)
         return dest
