@@ -12,6 +12,7 @@ from typing import Iterable, List, Any, Union
 from abc import abstractmethod, ABC
 from enum import Enum
 import io
+import shutil
 
 import portalocker
 
@@ -284,11 +285,10 @@ class FileInfo(NodeInfo):
         else:
             raise TypeError('dest is not one of `str`, `FileInfo`, `DirectoryInfo`')
 
-        with open(self._path, 'rb', buffering=buffering) as source:
+        with self.open_for_read_bytes(buffering=buffering) as source:
             # use x mode to ensure dest does not exists.
             with open(dest_path, 'xb') as dest_file:
-                for buffer in source:
-                    dest_file.write(buffer)
+                shutil.copyfileobj(source, dest_file)
 
     def read_text(self, encoding='utf-8') -> str:
         ''' read all text into memory. '''
