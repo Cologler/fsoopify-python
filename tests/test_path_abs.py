@@ -19,11 +19,20 @@ def test_is_abspath():
     abspath = Path.from_argv()
     assert abspath.is_abspath()
     assert abspath == sys.argv[0]
-    assert abspath is abspath.get_abspath()
 
     relpath = Path('abc') # rel path
     assert relpath.get_abspath().is_abspath()
     assert relpath.get_abspath() == os.path.abspath('abc')
+
+def test_get_abspath():
+    abspath = Path.from_argv()
+    assert abspath is abspath.get_abspath()
+
+@on_win
+def test_is_abspath_on_win():
+    assert Path('c:').is_abspath()
+    assert Path('c:\\').is_abspath()
+    assert Path('c://').is_abspath()
 
 def test_abspath_get_parent():
     path = Path.from_argv(0)

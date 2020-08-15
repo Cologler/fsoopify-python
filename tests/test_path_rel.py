@@ -12,7 +12,17 @@ import pytest
 
 from fsoopify import Path
 
-NT = sys.platform == 'win32'
+on_win = pytest.mark.skipif(os.name != 'nt', reason="only run on windows")
+on_unix = pytest.mark.skipif(os.name == 'nt', reason="only run on unix")
+
+def test_is_abspath():
+    assert not Path('abc').is_abspath()
+
+def test_get_abspath():
+    relpath = Path('abc')
+    abspath = relpath.get_abspath()
+    assert abspath.is_abspath()
+    assert abspath == os.path.abspath('abc')
 
 def test_relpath_get_parent_when_root_is_dir():
     src_path = os.path.join('a', 'b', 'c')

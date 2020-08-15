@@ -56,17 +56,6 @@ def test_path_normalcase():
     _, path = get_path_from_argv_0()
     assert isinstance(path.normalcase, str)
 
-def test_is_abspath():
-    _, path = get_path_from_argv_0()
-    assert path.is_abspath()
-
-    assert not Path('s').is_abspath()
-
-    # only on windows
-    assert Path('c:').is_abspath() == NT
-    assert Path('c:\\').is_abspath() == NT
-    assert Path('c://').is_abspath() == NT
-
 @pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")
 def test_abspath_with_root_on_win32():
     path_str = 'c:\\'
