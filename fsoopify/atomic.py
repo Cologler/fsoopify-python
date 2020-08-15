@@ -5,9 +5,11 @@
 #
 # ----------
 
+import os
 import io
 import shutil
 import types
+import contextlib
 
 import atomicwrites
 
@@ -82,14 +84,18 @@ def open_atomic(path: str, mode : str, **kwargs):
 
     try:
         if 'w' not in mode:
-            # read+write or append
-            with open(path) as reader:
-                shutil.copyfileobj(reader, dest)
+            if os.path.isfile(path):
+                with contextlib.suppress(FileNotFoundError):
+                    # read+write or append
+                    read_mode = 'r'
+                    if 'b' in mode:
+                        read_mode += 'b'
+                    with open(path, read_mode) as reader:
+                        shutil.copyfileobj(reader, dest)
 
-            if 'a' not in mode:
-                # read+write
-                dest.seek(0)
-
+                if 'a' not in mode:
+                    # read+write
+                    dest.seek(0)
         return dest
     except Exception:
         dest.close()
