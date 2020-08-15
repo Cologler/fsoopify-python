@@ -29,31 +29,21 @@ param_lock = pytest.mark.parametrize("lock", [True, False])
 param_atomic = pytest.mark.parametrize("atomic", [True, False])
 
 @param_data
-def test_dump_load_with_format(data):
+@pytest.mark.parametrize('format', ['json', 'json5', 'yaml', 'toml', 'pickle'])
+@pytest.mark.parametrize('ext', ['', 'json', 'bin', 'txt'])
+def test_dump_load_with_format(data, format, ext):
     with tempfile.TemporaryDirectory() as tmpdir:
-        dir_info = DirectoryInfo(tmpdir)
-
-        for fmt in ('json', 'json5', 'yaml', 'toml', 'pickle'):
-            file_info = dir_info.get_fileinfo(f'data_{fmt}.{fmt}')
-            file_info.dump(data, fmt)
-            assert data == file_info.load(fmt)
+        file_info = DirectoryInfo(tmpdir).get_fileinfo(f'data' + ext)
+        file_info.dump(data, format)
+        assert data == file_info.load(format)
 
 @param_data
-def test_dump_load_with_ext(data):
+@pytest.mark.parametrize('ext', ['json', 'json5', 'yaml', 'toml'])
+def test_dump_load_with_ext(data, ext):
     with tempfile.TemporaryDirectory() as tmpdir:
-        dir_info = DirectoryInfo(tmpdir)
-
-        for ext in ('json', 'json5', 'yaml', 'toml'):
-            file_info = dir_info.get_fileinfo(f'data_.{ext}')
-            file_info.dump(data)
-            assert data == file_info.load()
-
-        for fmt in ('pickle', ):
-            fi = dir_info.get_fileinfo(f'data_{fmt}.{fmt}')
-            with raises(FormatNotFoundError):
-                fi.dump(data)
-            with raises(FormatNotFoundError):
-                fi.load()
+        file_info = DirectoryInfo(tmpdir).get_fileinfo(f'data_.{ext}')
+        file_info.dump(data)
+        assert data == file_info.load()
 
 @param_data
 @param_lock
@@ -82,30 +72,29 @@ def test_load_context(data, lock: bool, atomic: bool):
             s.data = None
         assert not file_info.is_exists()
 
-def test_load_context_with_error():
-    data = example_data_1
-    name = 'test_load_context.json'
+@param_data
+@param_lock
+@param_atomic
+def test_load_context_with_error(data, lock, atomic):
     with tempfile.TemporaryDirectory() as tmpdir:
-        dir_info = DirectoryInfo(tmpdir)
-        file_info = dir_info.get_fileinfo(name)
+        file_info = DirectoryInfo(tmpdir).get_fileinfo('a.json')
         assert not file_info.is_exists()
 
-        with file_info.load_context(lock=True) as s:
+        with file_info.load_context(lock=lock, atomic=atomic) as s:
             assert s.data is None
             s.data = data
         assert file_info.is_exists()
 
         with contextlib.suppress(ValueError):
-            with file_info.load_context(lock=True) as s:
+            with file_info.load_context(lock=lock, atomic=atomic) as s:
                 assert s.data == data
                 s.data = {}
                 raise ValueError # raise any error
 
-        with file_info.load_context(lock=True) as s:
+        with file_info.load_context(lock=lock, atomic=atomic) as s:
             assert s.data == data # still not changes
 
-
-def test_pipfile():
+def test_load_pipfile():
     import pipfile
     from fsoopify.serialize import NotSupportError
     assert FileInfo('Pipfile').load() == pipfile.load('Pipfile').data
