@@ -422,6 +422,21 @@ class FileInfo(NodeInfo):
             return hasher.result
 
     def get_hasher(self, *algorithms: str):
+        '''
+        get the hasher to hash the file.
+        this is helpful if you are writing with progress bar, etc.
+
+        to use this, read the source from `get_file_hash` method:
+
+        ``` py
+        def get_file_hash(self, *algorithms: str):
+            with self.get_hasher(*algorithms) as hasher:
+                while hasher.read_block():
+                    pass
+                return hasher.result
+        ```
+        '''
+
         from .hashs import Hasher
         return Hasher(self._path, algorithms)
 
