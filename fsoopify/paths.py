@@ -272,7 +272,7 @@ class _AbsPath(Path):
     def _get_parent(self, level: int):
         parts = self.replace('\\', '/').rstrip('/').split('/')
         if len(parts) <= level:
-            raise ValueError(f'for path <{self}>, max level is {len(parts) - 1}')
+            return None
         new_parts = parts[:-level]
         if not NT and new_parts[0] == '':
             new_parts[0] = '/'

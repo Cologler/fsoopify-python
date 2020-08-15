@@ -64,12 +64,9 @@ class NodeInfo(ABC):
 
         return `None` if self is top.
         '''
-        try:
-            parent_path = self.path.get_parent(level)
-        except ValueError: # abspath cannot get parent
-            return None
-        assert parent_path
-        return DirectoryInfo(parent_path)
+        parent_path = self.path.get_parent(level)
+        if parent_path:
+            return DirectoryInfo(parent_path)
 
     @staticmethod
     def from_path(path):
