@@ -12,15 +12,8 @@ import pytest
 
 from fsoopify import Path
 
-def only_run_on_win(func):
-    return pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")(
-        func
-    )
-
-def only_run_on_unix(func):
-    return pytest.mark.skipif(sys.platform == 'win32', reason="only run on unix")(
-        func
-    )
+on_win = pytest.mark.skipif(os.name != 'nt', reason="only run on windows")
+on_unix = pytest.mark.skipif(os.name == 'nt', reason="only run on unix")
 
 def test_abspath_get_parent():
     path = Path.from_argv(0)
@@ -37,7 +30,7 @@ def _assert_root_abspath_unable_get_parent(path: Path):
     # dirname is None
     assert path.dirname is None
 
-@only_run_on_win
+@on_win
 def test_abspath_get_parent_on_win32():
     src_path = os.path.join('c:\\', 'd', 'e')
     path = Path(src_path)
@@ -51,7 +44,7 @@ def test_abspath_get_parent_on_win32():
     _assert_root_abspath_unable_get_parent(Path('C:'))
     _assert_root_abspath_unable_get_parent(Path('C:\\'))
 
-@only_run_on_unix
+@on_unix
 def test_abspath_get_parent_on_unix():
     src_path = os.path.join('/', 'd', 'e')
     path = Path(src_path)
@@ -67,7 +60,7 @@ def test_abspath_get_parent_on_unix():
 def test_abspath_property():
     pass
 
-@only_run_on_win
+@on_win
 def test_abspath_property_on_win32():
 
     # test root:
@@ -75,7 +68,7 @@ def test_abspath_property_on_win32():
         root_path = Path(root_str)
         assert root_path.name == 'c:'
 
-@only_run_on_unix
+@on_unix
 def test_abspath_propertye_on_unix():
 
     # test root:
