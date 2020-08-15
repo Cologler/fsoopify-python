@@ -11,6 +11,7 @@ import shutil
 import types
 import contextlib
 
+import portalocker
 import atomicwrites
 
 class _ProxyDescriptor:
@@ -71,12 +72,13 @@ def open_atomic(path: str, mode : str, **kwargs):
     overwrite = 'x' not in mode
 
     atomic_mode = 'w'
+    if 'w' not in mode:
+        atomic_mode += '+'
     if 'b' in mode:
         atomic_mode += 'b'
 
-    dest = atomicwrites.atomic_write(path, mode=atomic_mode,
-        overwrite=overwrite,
-        **kwargs)
+    dest = atomicwrites.atomic_write(path, mode=atomic_mode, overwrite=overwrite, **kwargs)
+
     if 'b' in mode:
         dest = BufferedIOProxy(dest)
     else:
@@ -91,6 +93,7 @@ def open_atomic(path: str, mode : str, **kwargs):
                     if 'b' in mode:
                         read_mode += 'b'
                     with open(path, read_mode) as reader:
+                        portalocker.lock(reader, portalocker.LOCK_EX) # ensure file not change when we clone.
                         shutil.copyfileobj(reader, dest)
 
                 if 'a' not in mode:
