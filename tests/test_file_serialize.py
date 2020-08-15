@@ -53,51 +53,39 @@ def test_dump_load_with_ext():
                 fi.load()
 
 def test_load_context():
-    data = example_data_1
-    name = 'test_load_context.json'
-    with tempfile.TemporaryDirectory() as tmpdir:
-        dir_info = DirectoryInfo(tmpdir)
-        file_info = dir_info.get_fileinfo(name)
-        if file_info.is_exists():
-            file_info.delete()
+    def _test_load_context(lock: bool, atomic: bool):
+        data = example_data_1
+        name = 'test_load_context.json'
 
-        assert not file_info.is_exists()
-        with file_info.load_context() as s:
-            assert s.data is None
-            s.data = data
-        assert file_info.is_exists()
-        with file_info.load_context() as s:
-            assert s.data == data
-            s.data = None
-        assert not file_info.is_exists()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dir_info = DirectoryInfo(tmpdir)
+            file_info = dir_info.get_fileinfo(name)
+            if file_info.is_exists():
+                file_info.delete()
 
-def test_load_context_with_locked():
-    data = example_data_1
-    name = 'test_load_context.json'
-    with tempfile.TemporaryDirectory() as tmpdir:
-        dir_info = DirectoryInfo(tmpdir)
-        file_info = dir_info.get_fileinfo(name)
-        if file_info.is_exists():
-            file_info.delete()
+            # test create
+            assert not file_info.is_exists()
+            with file_info.load_context(lock=lock, atomic=atomic) as s:
+                assert s.data is None
+                s.data = data
+            assert file_info.is_exists()
 
-        # test create
-        assert not file_info.is_exists()
-        with file_info.load_context(lock=True) as s:
-            assert s.data is None
-            s.data = data
-        assert file_info.is_exists()
+            # test read and write
+            with file_info.load_context(lock=lock, atomic=atomic) as s:
+                assert s.data == data
+                s.data = {}
+            with file_info.load_context(lock=lock, atomic=atomic) as s:
+                assert s.data == {}
 
-        # test read and write
-        with file_info.load_context(lock=True) as s:
-            assert s.data == data
-            s.data = {}
-        with file_info.load_context(lock=True) as s:
-            assert s.data == {}
+            # test remove
+            with file_info.load_context(lock=lock, atomic=atomic) as s:
+                s.data = None
+            assert not file_info.is_exists()
 
-        # test remove
-        with file_info.load_context(lock=True) as s:
-            s.data = None
-        assert not file_info.is_exists()
+    _test_load_context(False, False)
+    _test_load_context(False, True)
+    _test_load_context(True, False)
+    _test_load_context(True, True)
 
 def test_load_context_with_error():
     data = example_data_1
