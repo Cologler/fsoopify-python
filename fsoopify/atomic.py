@@ -18,15 +18,15 @@ class _ProxyDescriptor:
         self._name = name
 
     def __get__(self, obj, cls=None):
-        return getattr(obj.__io, self._name)
+        return getattr(obj._baseio, self._name)
 
     def __set__(self, obj, value) -> None:
-        setattr(obj.__io, self._name)
+        setattr(obj._baseio, self._name)
 
     def __delete__(self, obj) -> None:
         # if an object defines `__set__()` or `__delete__()`,
         # it is considered a data descriptor.
-        delattr(obj.__io, self._name)
+        delattr(obj._baseio, self._name)
 
     def __set_name__(self, owner_cls, name):
         # New in version 3.6
@@ -36,17 +36,17 @@ class _ProxyDescriptor:
 
 class IOProxyBase:
     def __init__(self, gen):
-        self.__gen = gen
-        self.__io = gen.__enter__()
+        self._gen = gen
+        self._baseio = gen.__enter__()
 
     def __enter__(self):
-        return self.__io
+        return self._baseio
+
+    def getio(self):
+        return self._baseio
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        return self.__gen.__exit__(exc_type, exc_val, exc_tb)
-
-    def __getattr__(self, name):
-        return getattr(self.__io, name)
+        return self._gen.__exit__(exc_type, exc_val, exc_tb)
 
     __iter__ = _ProxyDescriptor()
 

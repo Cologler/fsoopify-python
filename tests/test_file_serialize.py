@@ -55,13 +55,10 @@ def test_dump_load_with_ext():
 def test_load_context():
     def _test_load_context(lock: bool, atomic: bool):
         data = example_data_1
-        name = 'test_load_context.json'
 
         with tempfile.TemporaryDirectory() as tmpdir:
             dir_info = DirectoryInfo(tmpdir)
-            file_info = dir_info.get_fileinfo(name)
-            if file_info.is_exists():
-                file_info.delete()
+            file_info = dir_info.get_fileinfo('test_load_context.json')
 
             # test create
             assert not file_info.is_exists()
