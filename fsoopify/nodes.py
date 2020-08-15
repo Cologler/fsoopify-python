@@ -164,24 +164,28 @@ class FileInfo(NodeInfo):
             return open_atomic(self._path, mode=mode, **kwargs)
 
     def open_or_create(self, mode='r', **kwargs):
-        if 'a' in mode or 'w' in mode:
+        if 'a' in mode or 'w' in mode or 'x' in mode:
+            # such mode auto create the file if does not exists,
+            # so we did not need to override it.
             return self.open(mode, **kwargs)
 
         if os.path.exists(self._path):
             try:
                 return self.open(mode, **kwargs)
             except FileNotFoundError:
+                # file maybe removed after syscall os.path.exists.
                 pass
 
         else:
-            create_mode = 'x'
-            if '+' in mode or 'r' in mode:
-                create_mode += '+'
+            # for all cases ('rt', 'rb', 'r+t' or 'r+b'):
+            # - always be readable
+            create_mode = 'x+' # ensure not overwrite.
             if 'b' in mode:
                 create_mode += 'b'
             try:
                 return self.open(create_mode, **kwargs)
             except FileExistsError:
+                # file maybe created from another syscall.
                 pass
 
         return self.open_or_create(mode, **kwargs)
