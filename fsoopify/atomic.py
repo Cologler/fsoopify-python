@@ -38,7 +38,7 @@ class IOProxyBase:
         self.__io = gen.__enter__()
 
     def __enter__(self):
-        return self
+        return self.__io
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self.__gen.__exit__(exc_type, exc_val, exc_tb)
