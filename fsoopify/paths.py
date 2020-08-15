@@ -9,8 +9,6 @@
 import os
 import sys
 
-from .utils import gettercache
-
 NT = sys.platform == 'win32'
 
 if NT:
@@ -26,7 +24,7 @@ if NT:
     def _get_normpath(path: str):
         val = str(path) # avoid recursion
         if val.endswith(':'):
-            val += os.path.sep
+            val += os.path.sep # c: -> c:\
         return os.path.normpath(os.path.normcase(val))
 
     def _join(path, *others):
@@ -50,7 +48,7 @@ else:
 
 class PathComponent(str):
     def __init__(self, *args):
-        self._norm: str = None
+        self._normpath: str = None
 
     def __repr__(self):
         return '{}(\'{}\')'.format(type(self).__name__, self)
@@ -68,12 +66,13 @@ class PathComponent(str):
         return hash(self.normalcase)
 
     @property
-    @gettercache
     def normalcase(self):
         '''
         get normcase path which create by `os.path.normcase()`.
         '''
-        return _get_normpath(self)
+        if self._normpath is None:
+            self._normpath = _get_normpath(self)
+        return self._normpath
 
 
 class Name(PathComponent):
