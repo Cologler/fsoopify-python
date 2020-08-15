@@ -14,28 +14,6 @@ import pytest
 
 from fsoopify import *
 
-def test_read_bytes():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
-        with open(fi.path, 'xb') as fp:
-            fp.write(b'fjasij')
-        assert fi.read_bytes() == b'fjasij'
-
-def test_read_text():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
-        with open(fi.path, 'xt') as fp:
-            fp.write('fjasij')
-        assert fi.read_text() == 'fjasij'
-
-@pytest.mark.parametrize('encoding', ['utf-8', 'utf-16', 'utf-16-be'])
-def test_read_text_with_encoding(encoding):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
-        with open(fi.path, 'xb') as fp:
-            fp.write('fjasij'.encode(encoding))
-        assert fi.read_text(encoding) == 'fjasij'
-
 lock_atomic_params = (
     'lock, atomic',
     list(itertools.product([True, False], repeat=2))
@@ -185,16 +163,27 @@ def test_open_or_create_bytes():
             assert fp.read() == b'123'
         assert fi.read_bytes() == b'123'
 
-def test_write_bytes():
+def test_read_bytes():
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
-        assert not fi.is_exists()
-        fi.write_bytes(b'd1s5a')
-        assert fi.read_bytes() == b'd1s5a'
-        fi.write_bytes(bytearray(b'fnnuah'), append=False)
-        assert fi.read_bytes() == b'fnnuah'
-        fi.write_bytes(b'd1s5a', append=True)
-        assert fi.read_bytes() == b'fnnuahd1s5a'
+        with open(fi.path, 'xb') as fp:
+            fp.write(b'fjasij')
+        assert fi.read_bytes() == b'fjasij'
+
+def test_read_text():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+        with open(fi.path, 'xt') as fp:
+            fp.write('fjasij')
+        assert fi.read_text() == 'fjasij'
+
+@pytest.mark.parametrize('encoding', ['utf-8', 'utf-16', 'utf-16-be'])
+def test_read_text_with_encoding(encoding):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+        with open(fi.path, 'xb') as fp:
+            fp.write('fjasij'.encode(encoding))
+        assert fi.read_text(encoding) == 'fjasij'
 
 def test_read_into_stream():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -213,6 +202,52 @@ def test_read_into_stream():
         dest = io.StringIO()
         src.read_into_stream(dest)
         assert dest.getvalue() == 'd1s5afajjmogjfwiughweuihgw'
+
+def test_write_text():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+        fi.write_text('dsajuidhsa')
+        assert fi.read_text() == 'dsajuidhsa'
+
+def test_write_bytes():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+        assert not fi.is_exists()
+        fi.write_bytes(b'd1s5a')
+        assert fi.read_bytes() == b'd1s5a'
+        fi.write_bytes(bytearray(b'fnnuah'), append=False)
+        assert fi.read_bytes() == b'fnnuah'
+        fi.write_bytes(b'd1s5a', append=True)
+        assert fi.read_bytes() == b'fnnuahd1s5a'
+
+def test_write_from_stream():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+        fi.write_from_stream(io.StringIO('dsajuidhsa'))
+        assert fi.read_text() == 'dsajuidhsa'
+        fi.write_from_stream(io.BytesIO(b'fdsamdks'), append=True)
+        assert fi.read_bytes() == b'dsajuidhsafdsamdks'
+
+def test_copy_to():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data = b'fhuiwhwe uieh'
+
+        root = DirectoryInfo(tmpdir)
+        src = root.get_fileinfo('src.txt')
+        src.write_bytes(data)
+
+        dest1_fi = root.get_fileinfo('dst1.txt')
+        src.copy_to(dest1_fi.path)
+        assert data == dest1_fi.read_bytes()
+
+        dest2_fi = root.get_fileinfo('dst2.txt')
+        src.copy_to(dest2_fi)
+        assert data == dest2_fi.read_bytes()
+
+        dest3_dir = root.get_dirinfo('djsai')
+        dest3_dir.ensure_created()
+        src.copy_to(dest3_dir)
+        assert data == dest3_dir.get_fileinfo(src.path.name).read_bytes()
 
 def test_iadd_str():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -254,10 +289,3 @@ def test_iadd_file():
         fi2.write_bytes(b'dsami')
         fi2 += fi
         assert fi2.read_bytes() == b'dsamid1s5a'
-
-def test_get_file_hash():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
-        fi.write_bytes(b'd1s5a')
-        hashs = fi.get_file_hash('crc32', 'md5', 'sha1')
-        assert hashs == ('2c34fc25', 'f8fc4601b857c7acc459f7118fbca878', 'fe0b025ab8735a2a7bd431b249b42e888e2df1f6')
