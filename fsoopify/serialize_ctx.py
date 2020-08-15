@@ -38,7 +38,7 @@ class Context:
             if self._atomic:
                 self._fp = self._file_info.open('wb', atomic=True)
             else:
-                self._fp = self._file_info.open('a+b')
+                self._fp = self._file_info.open_or_create('r+b')
 
             self._lock_ctx = self._lock(self._file_info, self._fp)
             self._lock_ctx.__enter__()
