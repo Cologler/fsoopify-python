@@ -163,6 +163,29 @@ class FileInfo(NodeInfo):
         else:
             return open_atomic(self._path, mode=mode, **kwargs)
 
+    def open_or_create(self, mode='r', **kwargs):
+        if 'a' in mode or 'w' in mode:
+            return self.open(mode, **kwargs)
+
+        if os.path.exists(self._path):
+            try:
+                return self.open(mode, **kwargs)
+            except FileNotFoundError:
+                pass
+
+        else:
+            create_mode = 'x'
+            if '+' in mode or 'r' in mode:
+                create_mode += '+'
+            if 'b' in mode:
+                create_mode += 'b'
+            try:
+                return self.open(create_mode, **kwargs)
+            except FileExistsError:
+                pass
+
+        return self.open_or_create(mode, **kwargs)
+
     def open_for_read_bytes(self, *, buffering=-1):
         ''' open the file with read bytes mode. '''
         return self.open('rb', buffering=buffering)
