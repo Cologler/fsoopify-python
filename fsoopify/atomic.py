@@ -19,12 +19,12 @@ class _ProxyDescriptor:
         return getattr(obj.__io, self._name)
 
     def __set__(self, obj, value) -> None:
-        pass
+        setattr(obj.__io, self._name)
 
     def __delete__(self, obj) -> None:
         # if an object defines `__set__()` or `__delete__()`,
         # it is considered a data descriptor.
-        pass
+        delattr(obj.__io, self._name)
 
     def __set_name__(self, owner_cls, name):
         # New in version 3.6
