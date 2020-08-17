@@ -242,18 +242,39 @@ def test_copy_to():
         src = root.get_fileinfo('src.txt')
         src.write_bytes(data)
 
+        # copy with `str`
         dest1_fi = root.get_fileinfo('dst1.txt')
         src.copy_to(dest1_fi.path)
         assert data == dest1_fi.read_bytes()
 
+        # copy with `FileInfo`
         dest2_fi = root.get_fileinfo('dst2.txt')
         src.copy_to(dest2_fi)
         assert data == dest2_fi.read_bytes()
 
+        # copy with `DirectoryInfo`
         dest3_dir = root.get_dirinfo('djsai')
         dest3_dir.ensure_created()
         src.copy_to(dest3_dir)
         assert data == dest3_dir.get_fileinfo(src.path.name).read_bytes()
+
+def test_copy_from():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data = b'fhuiwhwe uieh'
+
+        root = DirectoryInfo(tmpdir)
+        src = root.get_fileinfo('src.txt')
+        src.write_bytes(data)
+
+        # copy with `str`
+        dest1_fi = root.get_fileinfo('dst1.txt')
+        dest1_fi.copy_from(src.path)
+        assert data == dest1_fi.read_bytes()
+
+        # copy with `FileInfo`
+        dest2_fi = root.get_fileinfo('dst2.txt')
+        dest2_fi.copy_from(src)
+        assert data == dest2_fi.read_bytes()
 
 def test_iadd_str():
     with tempfile.TemporaryDirectory() as tmpdir:

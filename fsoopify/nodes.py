@@ -260,28 +260,6 @@ class FileInfo(NodeInfo):
             mode += 'b'
         return self.write(stream, mode=mode, atomic=atomic)
 
-    def copy_to(self, dest, buffering: int = -1):
-        '''
-        copy the file to dest path.
-
-        `dest` canbe `str`, `FileInfo` or `DirectoryInfo`.
-
-        if `dest` is `DirectoryInfo`, that mean copy into the dir with same name.
-        '''
-        if isinstance(dest, str):
-            dest_path = dest
-        elif isinstance(dest, FileInfo):
-            dest_path = dest.path
-        elif isinstance(dest, DirectoryInfo):
-            dest_path = dest.path / self.path.name
-        else:
-            raise TypeError('dest is not one of `str`, `FileInfo`, `DirectoryInfo`')
-
-        with self.open_for_read_bytes(buffering=buffering) as source:
-            # use x mode to ensure dest does not exists.
-            with open(dest_path, 'xb') as dest_file:
-                shutil.copyfileobj(source, dest_file)
-
     def read_text(self, encoding='utf-8') -> str:
         ''' read all text into memory. '''
         with self.open_for_read_text(encoding=encoding) as fp:
@@ -309,6 +287,47 @@ class FileInfo(NodeInfo):
 
         with fp as fsrc:
             shutil.copyfileobj(fsrc, stream, buffering)
+
+    def copy_to(self, dest: Union[str, 'FileInfo', 'DirectoryInfo'], *,
+                buffering: int = -1, overwrite=False):
+        '''
+        copy the file to dest location.
+
+        if `dest` is `DirectoryInfo`, that mean copy into the dir with same name.
+        '''
+        if isinstance(dest, str):
+            dest_path = dest
+        elif isinstance(dest, FileInfo):
+            dest_path = dest.path
+        elif isinstance(dest, DirectoryInfo):
+            dest_path = dest.path / self.path.name
+        else:
+            raise TypeError('dest is not one of `str`, `FileInfo`, `DirectoryInfo`')
+
+        with self.open_for_read_bytes(buffering=buffering) as source:
+            # use x mode to ensure dest does not exists.
+            mode = 'wb' if overwrite else 'xb'
+            with open(dest_path, mode) as dest_file:
+                shutil.copyfileobj(source, dest_file)
+
+    def copy_from(self, src: Union[str, 'FileInfo'], *,
+                  buffering: int = -1, overwrite=False,
+                  lock=False, atomic=False):
+        '''
+        copy content from src.
+        '''
+
+        if isinstance(src, str):
+            src = FileInfo(src)
+        elif isinstance(src, FileInfo):
+            pass
+        else:
+            raise TypeError('src is not one of `str`, `FileInfo`')
+
+        mode = 'wb' if overwrite else 'xb'
+        with self.open(mode, buffering=buffering, lock=lock, atomic=atomic) as dst_fp:
+            with src.open_for_read_bytes(buffering=buffering) as src_fp:
+                shutil.copyfileobj(src_fp, dst_fp)
 
     def __iadd__(self, other: Union[str, bytes, bytearray, io.IOBase, 'FileInfo']):
         if isinstance(other, str):
