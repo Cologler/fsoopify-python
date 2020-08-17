@@ -22,6 +22,7 @@ from .serialize import load, dump
 from .serialize_ctx import load_context, Context
 from .tree import ContentTree
 from .atomic import open_atomic
+from .utils import copyfileobj
 
 
 class NodeType(Enum):
@@ -232,13 +233,7 @@ class FileInfo(NodeInfo):
                 read_buffering = buffering
                 if read_buffering < 2:
                     read_buffering = io.DEFAULT_BUFFER_SIZE
-                total = 0
-                while True:
-                    b = data.read(read_buffering)
-                    if not b:
-                        break
-                    total += fp.write(b)
-                return total
+                return copyfileobj(data, fp)
 
     def read(self, mode='r', *, buffering=-1, encoding=None, newline=None):
         ''' read all content from the file. '''
@@ -414,7 +409,8 @@ class FileInfo(NodeInfo):
         for example: `get_file_hash('md5', 'sha1')` return `('XXXX1', 'XXXX2')`
         '''
         with self.get_hasher(*algorithms) as hasher:
-            while hasher.read_block():
+            read_block = hasher.read_block
+            while read_block():
                 pass
             return hasher.result
 
