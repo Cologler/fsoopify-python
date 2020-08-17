@@ -299,21 +299,16 @@ class FileInfo(NodeInfo):
         if not stream.writable():
             raise ValueError('stream is unable to write.')
 
-        if buffering < 0:
-            buffering = io.DEFAULT_BUFFER_SIZE
+        if buffering <= 0:
+            buffering = shutil.COPY_BUFSIZE
 
         if isinstance(stream, io.TextIOBase):
-            encoding = encoding or 'utf-8'
-            fp = self.open_for_read_text(encoding=encoding)
+            fp = self.open_for_read_text(encoding=encoding or 'utf-8')
         else:
             fp = self.open_for_read_bytes()
 
-        with fp:
-            while True:
-                data = fp.read(buffering)
-                if not data:
-                    break
-                stream.write(data)
+        with fp as fsrc:
+            shutil.copyfileobj(fsrc, stream, buffering)
 
     def __iadd__(self, other: Union[str, bytes, bytearray, io.IOBase, 'FileInfo']):
         if isinstance(other, str):
