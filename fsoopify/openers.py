@@ -10,35 +10,33 @@ from abc import ABC, abstractmethod
 import portalocker
 
 class FileOpenerBase(ABC):
-    __slots__ = ('_openargs', '_ctx')
-
-    def __init__(self, *args, **kwargs):
-        self._openargs = (args, kwargs)
+    __slots__ = ('_cm')
 
     @abstractmethod
-    def _get_context(self, args, kwargs):
+    def _get_contextmanager(self):
         raise NotImplementedError
 
     def __enter__(self):
-        args, kwargs = self._openargs
-        del self._openargs
-        self._ctx = self._get_context(args, kwargs)
-        return self._ctx.__enter__()
+        self._cm = self._get_contextmanager()
+        return self._cm.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        rv = self._ctx.__exit__(exc_type, exc_val, exc_tb)
-        del self._ctx
+        rv = self._cm.__exit__(exc_type, exc_val, exc_tb)
+        del self._cm
         return rv
 
 
 class FileOpener(FileOpenerBase):
-    __slots__ = ('_lock')
+    __slots__ = ('_lock', '_openargs')
 
     def __init__(self, *args, lock, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self._lock = lock
+        self._openargs = (args, kwargs)
 
-    def _get_context(self, args, kwargs):
+    def _get_contextmanager(self):
+        args, kwargs = self._openargs
+        del self._openargs
         fp = open(*args, **kwargs)
         if self._lock:
             try:
@@ -47,3 +45,11 @@ class FileOpener(FileOpenerBase):
                 fp.close()
                 raise
         return fp
+
+
+class ContextManagerFileOpener(FileOpenerBase):
+    def __init__(self, cm):
+        self._cm = cm
+
+    def _get_contextmanager(self):
+        return self._cm
