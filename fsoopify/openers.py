@@ -26,9 +26,10 @@ class FileOpenerBase(ABC):
         return self._cm.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        rv = self._cm.__exit__(exc_type, exc_val, exc_tb)
-        del self._cm
-        return rv
+        if hasattr(self, '_cm'):
+            rv = self._cm.__exit__(exc_type, exc_val, exc_tb)
+            del self._cm
+            return rv
 
 
 class FileOpener(FileOpenerBase):

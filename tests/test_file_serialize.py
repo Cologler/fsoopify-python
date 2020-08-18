@@ -57,6 +57,7 @@ def test_load_context(data, lock: bool, atomic: bool):
         assert not file_info.is_exists()
         with file_info.load_context(lock=lock, atomic=atomic) as s:
             assert s.data is None
+            assert not file_info.is_exists()
             s.data = data
         assert file_info.is_exists()
 
