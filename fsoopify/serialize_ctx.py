@@ -37,7 +37,7 @@ class Context:
             is_exists = self._file_info.is_file()
 
             if self._atomic:
-                self._openfd_ctx = self._file_info.open('wb', atomic=True)
+                self._openfd_ctx = self._file_info.open('w+b', atomic=True)
             else:
                 self._openfd_ctx = self._file_info.open_or_create('r+b')
 

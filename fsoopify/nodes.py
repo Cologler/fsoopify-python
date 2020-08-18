@@ -163,13 +163,18 @@ class FileInfo(NodeInfo):
             buffering=buffering,
             encoding=encoding,
             newline=newline,
-            closefd=closefd
+            closefd=closefd,
+            lock=lock,
         )
 
-        if not atomic:
-            return FileOpener(self._path, **kwargs, lock=lock)
-        else:
-            return open_atomic(self._path, **kwargs)
+        if atomic:
+            if 'r' in mode and '+' not in mode:
+                # readonly mode, ignore atomic flag and open direct.
+                pass
+            else:
+                return open_atomic(self._path, **kwargs)
+
+        return FileOpener(self._path, **kwargs)
 
     def open_or_create(self, mode='r', *, lock=False, atomic=False, **kwargs):
         '''
@@ -185,7 +190,7 @@ class FileInfo(NodeInfo):
         if atomic:
             if '+' not in mode:
                 mode += '+' # 'r+t' or 'r+b'
-            return open_atomic(self._path, mode=mode, **kwargs)
+            return open_atomic(self._path, mode=mode, lock=lock, **kwargs)
 
         else:
             open_flags = os.O_RDWR | os.O_CREAT
