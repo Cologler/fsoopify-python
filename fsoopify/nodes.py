@@ -254,23 +254,21 @@ class FileInfo(NodeInfo):
         with self.open_for_read_bytes() as fp:
             return fp.read()
 
-    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int = -1):
+    def read_into_stream(self, stream: io.IOBase, *,
+                         encoding=None, buffering: int = -1):
         ''' read all content into stream. '''
         if not isinstance(stream, io.IOBase):
             raise TypeError(type(stream))
         if not stream.writable():
             raise ValueError('stream is unable to write.')
 
-        if buffering <= 0:
-            buffering = shutil.COPY_BUFSIZE
-
         if isinstance(stream, io.TextIOBase):
             fp = self.open_for_read_text(encoding=encoding or 'utf-8')
         else:
-            fp = self.open_for_read_bytes()
+            fp = self.open_for_read_bytes(buffering)
 
         with fp as fsrc:
-            shutil.copyfileobj(fsrc, stream, buffering)
+            shutil.copyfileobj(fsrc, stream)
 
     def copy_to(self, dest: Union[str, 'FileInfo', 'DirectoryInfo'], *,
                 buffering: int = -1, overwrite=False):
