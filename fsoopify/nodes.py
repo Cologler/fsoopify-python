@@ -23,7 +23,7 @@ from .serialize_ctx import load_context, Context
 from .tree import ContentTree
 from .atomic import open_atomic
 from .utils import copyfileobj, mode_to_flags
-from .openers import FileOpener, OSFileOpener
+from .openers import FileOpener, FileOpenerBase
 
 
 class NodeType(Enum):
@@ -150,16 +150,18 @@ class FileInfo(NodeInfo):
 
     def open(self, mode='r', *,
              buffering=-1, encoding=None, newline=None, closefd=True,
-             lock=False, atomic=False, or_create=False):
+             lock=False, atomic=False, or_create=False) -> FileOpenerBase:
         '''
-        open the file.
+        open the file,
+        return a `FileOpener` as context manager.
 
         - when `lock` set `True`, use `portalocker.lock(LOCK_EX)` to lock the file after it opened.
         - when `atomic` set `True`, read or write as atomic operations.
-
-        `or_create` parameter only work if `r` in mode,
-        which mean create file if it does not exists.
+        - when `or_create` set `True`, create file if it does not exists,
+          to prevent raises `FileNotFoundError` with `r+` mode.
         '''
+        opener=None
+
         def kwargs():
             # mode may update so we use kwargs as function.
             return dict(
@@ -169,15 +171,12 @@ class FileInfo(NodeInfo):
                 newline=newline,
                 closefd=closefd,
                 lock=lock,
+                opener=opener
             )
 
         if or_create and 'r' in mode:
-            if atomic:
-                if '+' not in mode:
-                    mode += '+' # 'r+t' or 'r+b'
-            else:
-                open_flags = mode_to_flags(mode) | os.O_CREAT
-                return OSFileOpener(self._path, flags=open_flags, **kwargs())
+            def opener(path, flags):
+                return os.open(path, flags | os.O_CREAT)
 
         if atomic:
             if 'r' in mode and '+' not in mode:
