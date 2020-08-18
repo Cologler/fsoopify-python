@@ -152,21 +152,26 @@ def test_open_or_create_text(lock, atomic):
 @param_lock
 @param_atomic
 def test_open_or_create_bytes(lock, atomic):
+    kwargs = dict(lock=lock, atomic=atomic)
+
     with tempfile.TemporaryDirectory() as tmpdir:
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
-        assert not fi.is_file()
-        with pytest.raises(FileNotFoundError):
-            with fi.open('r+b'):
-                pass
-        with fi.open_or_create('r+b', lock=lock, atomic=atomic) as fp:
+        with fi.open_or_create('rb', **kwargs) as fp:
+            assert fp.read() == b''
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
+
+        with fi.open_or_create('r+b', **kwargs) as fp:
+            assert fp.read() == b''
             fp.write(b'123')
             fp.seek(0)
             assert fp.read() == b'123'
-        with pytest.raises(FileExistsError):
-            with fi.open('x+'):
-                pass
-        with fi.open_or_create('r+b', lock=lock, atomic=atomic) as fp:
+        assert fi.read_bytes() == b'123'
+
+        with fi.open_or_create('r+b', **kwargs) as fp:
             assert fp.read() == b'123'
+
         assert fi.read_bytes() == b'123'
 
 def test_read_bytes():

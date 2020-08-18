@@ -22,7 +22,7 @@ from .serialize import load, dump
 from .serialize_ctx import load_context, Context
 from .tree import ContentTree
 from .atomic import open_atomic
-from .utils import copyfileobj
+from .utils import copyfileobj, mode_to_flags
 from .openers import FileOpener
 
 
@@ -193,14 +193,14 @@ class FileInfo(NodeInfo):
             return open_atomic(self._path, mode=mode, lock=lock, **kwargs)
 
         else:
-            open_flags = os.O_RDWR | os.O_CREAT
+            open_flags = mode_to_flags(mode) | os.O_CREAT
             fd = os.open(self._path, open_flags)
             fp = None
             try:
                 fp = os.fdopen(fd, mode, **kwargs)
                 if lock:
                     portalocker.lock(fp, portalocker.LOCK_EX)
-            except Exception:
+            except:
                 if fp:
                     fp.close()
                 os.close(fd)
