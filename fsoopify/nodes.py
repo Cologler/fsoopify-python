@@ -265,7 +265,7 @@ class FileInfo(NodeInfo):
         if isinstance(stream, io.TextIOBase):
             fp = self.open_for_read_text(encoding=encoding or 'utf-8')
         else:
-            fp = self.open_for_read_bytes(buffering)
+            fp = self.open_for_read_bytes(buffering=buffering)
 
         with fp as fsrc:
             shutil.copyfileobj(fsrc, stream)
