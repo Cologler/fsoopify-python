@@ -23,6 +23,7 @@ from .serialize_ctx import load_context, Context
 from .tree import ContentTree
 from .atomic import open_atomic
 from .utils import copyfileobj
+from .openers import FileOpener
 
 
 class NodeType(Enum):
@@ -158,6 +159,7 @@ class FileInfo(NodeInfo):
         '''
 
         kwargs = dict(
+            mode=mode,
             buffering=buffering,
             encoding=encoding,
             newline=newline,
@@ -165,12 +167,13 @@ class FileInfo(NodeInfo):
         )
 
         if not atomic:
-            fp = open(self._path, mode=mode, **kwargs)
+            return FileOpener(self._path, **kwargs, lock=lock)
+            fp = open(self._path, **kwargs)
             if lock:
                 portalocker.lock(fp, portalocker.LOCK_EX)
             return fp
         else:
-            return open_atomic(self._path, mode=mode, **kwargs)
+            return open_atomic(self._path, **kwargs)
 
     def open_or_create(self, mode='r', *, lock=False, atomic=False, **kwargs):
         '''
@@ -538,9 +541,7 @@ class DirectoryInfo(NodeInfo):
             name = str(item.path.name)
             if item.node_type == NodeType.file:
                 if as_stream:
-                    fp = item.open_for_read_bytes()
-                    tree[name] = fp
-                    tree.enter(fp)
+                    tree.set_context(name, item.open_for_read_bytes())
                 else:
                     tree[name] = item.read(mode='rb')
             else:
