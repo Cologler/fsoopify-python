@@ -9,7 +9,9 @@ from typing import *
 import shutil
 import os
 
-def copyfileobj(fsrc, fdst, length=shutil.COPY_BUFSIZE) -> int:
+COPY_BUFSIZE = getattr(shutil, 'COPY_BUFSIZE', 1024 * 1024)
+
+def copyfileobj(fsrc, fdst, length=COPY_BUFSIZE) -> int:
     """like `shutil.copyfileobj`, but return the length of total readed."""
     # Localize variable access to minimize overhead.
     fsrc_read = fsrc.read
