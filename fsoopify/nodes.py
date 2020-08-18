@@ -12,12 +12,18 @@ from typing import Iterable, List, Any, Union
 from abc import abstractmethod, ABC
 from enum import Enum
 import io
+import shutil
+
+import portalocker
 
 from .paths import Path
 from .size import Size
 from .serialize import load, dump
 from .serialize_ctx import load_context, Context
 from .tree import ContentTree
+from .atomic import open_atomic
+from .utils import copyfileobj, mode_to_flags
+from .openers import FileOpener, FileOpenerBase
 
 
 class NodeType(Enum):
@@ -60,12 +66,9 @@ class NodeInfo(ABC):
 
         return `None` if self is top.
         '''
-        try:
-            parent_path = self.path.get_parent(level)
-        except ValueError: # abspath cannot get parent
-            return None
-        assert parent_path
-        return DirectoryInfo(parent_path)
+        parent_path = self.path.get_parent(level)
+        if parent_path:
+            return DirectoryInfo(parent_path)
 
     @staticmethod
     def from_path(path):
@@ -145,14 +148,44 @@ class NodeInfo(ABC):
 
 class FileInfo(NodeInfo):
 
-    def open(self, mode='r', *, buffering=-1, encoding=None, newline=None, closefd=True):
-        ''' open the file. '''
-        return open(self._path,
-                    mode=mode,
-                    buffering=buffering,
-                    encoding=encoding,
-                    newline=newline,
-                    closefd=closefd)
+    def open(self, mode='r', *,
+             buffering=-1, encoding=None, newline=None, closefd=True,
+             lock=False, atomic=False, or_create=False) -> FileOpenerBase:
+        '''
+        open the file,
+        return a `FileOpener` as context manager.
+
+        - when `lock` set `True`, use `portalocker.lock(LOCK_EX)` to lock the file after it opened.
+        - when `atomic` set `True`, read or write as atomic operations.
+        - when `or_create` set `True`, create file if it does not exists,
+          to prevent raises `FileNotFoundError` with `r+` mode.
+        '''
+        opener=None
+
+        def kwargs():
+            # mode may update so we use kwargs as function.
+            return dict(
+                mode=mode,
+                buffering=buffering,
+                encoding=encoding,
+                newline=newline,
+                closefd=closefd,
+                lock=lock,
+                opener=opener
+            )
+
+        if or_create and 'r' in mode:
+            def opener(path, flags):
+                return os.open(path, flags | os.O_CREAT)
+
+        if atomic:
+            if 'r' in mode and '+' not in mode:
+                # readonly mode, ignore atomic flag and open direct.
+                pass
+            else:
+                return open_atomic(self._path, **kwargs())
+
+        return FileOpener(self._path, **kwargs())
 
     def open_for_read_bytes(self, *, buffering=-1):
         ''' open the file with read bytes mode. '''
@@ -167,7 +200,7 @@ class FileInfo(NodeInfo):
         ''' get file size. '''
         return Size(os.path.getsize(self.path))
 
-    def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None):
+    def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None, atomic=False):
         ''' write data into the file. '''
         if mode is None:
             if isinstance(data, (str, io.TextIOBase)):
@@ -177,37 +210,31 @@ class FileInfo(NodeInfo):
             else:
                 raise TypeError(type(data))
 
-        with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
+        with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline, atomic=atomic) as fp:
             if isinstance(data, (str, bytes, bytearray)):
                 return fp.write(data)
             else:
                 read_buffering = buffering
                 if read_buffering < 2:
                     read_buffering = io.DEFAULT_BUFFER_SIZE
-                total = 0
-                while True:
-                    b = data.read(read_buffering)
-                    if not b:
-                        break
-                    total += fp.write(b)
-                return total
+                return copyfileobj(data, fp)
 
     def read(self, mode='r', *, buffering=-1, encoding=None, newline=None):
         ''' read all content from the file. '''
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
 
-    def write_text(self, text: str, *, encoding='utf-8', append=True):
+    def write_text(self, text: str, *, encoding='utf-8', append=True, atomic=False):
         ''' write text into the file. '''
         mode = 'a' if append else 'w'
-        return self.write(text, mode=mode, encoding=encoding)
+        return self.write(text, mode=mode, encoding=encoding, atomic=atomic)
 
-    def write_bytes(self, data: Union[bytes, bytearray], *, append=True):
+    def write_bytes(self, data: Union[bytes, bytearray], *, append=True, atomic=False):
         ''' write bytes into the file. '''
         mode = 'ab' if append else 'wb'
-        return self.write(data, mode=mode)
+        return self.write(data, mode=mode, atomic=atomic)
 
-    def write_from_stream(self, stream: io.IOBase, *, append=True):
+    def write_from_stream(self, stream: io.IOBase, *, append=True, atomic=False):
         if not isinstance(stream, io.IOBase):
             raise TypeError(type(stream))
         if not stream.readable():
@@ -215,13 +242,38 @@ class FileInfo(NodeInfo):
         mode = 'a' if append else 'w'
         if not isinstance(stream, io.TextIOBase):
             mode += 'b'
-        return self.write(stream, mode=mode)
+        return self.write(stream, mode=mode, atomic=atomic)
 
-    def copy_to(self, dest, buffering: int = -1):
+    def read_text(self, encoding='utf-8') -> str:
+        ''' read all text into memory. '''
+        with self.open_for_read_text(encoding=encoding) as fp:
+            return fp.read()
+
+    def read_bytes(self) -> bytes:
+        ''' read all bytes into memory. '''
+        with self.open_for_read_bytes() as fp:
+            return fp.read()
+
+    def read_into_stream(self, stream: io.IOBase, *,
+                         encoding=None, buffering: int = -1):
+        ''' read all content into stream. '''
+        if not isinstance(stream, io.IOBase):
+            raise TypeError(type(stream))
+        if not stream.writable():
+            raise ValueError('stream is unable to write.')
+
+        if isinstance(stream, io.TextIOBase):
+            fp = self.open_for_read_text(encoding=encoding or 'utf-8')
+        else:
+            fp = self.open_for_read_bytes(buffering=buffering)
+
+        with fp as fsrc:
+            shutil.copyfileobj(fsrc, stream)
+
+    def copy_to(self, dest: Union[str, 'FileInfo', 'DirectoryInfo'], *,
+                buffering: int = -1, overwrite=False):
         '''
-        copy the file to dest path.
-
-        `dest` canbe `str`, `FileInfo` or `DirectoryInfo`.
+        copy the file to dest location.
 
         if `dest` is `DirectoryInfo`, that mean copy into the dir with same name.
         '''
@@ -234,44 +286,30 @@ class FileInfo(NodeInfo):
         else:
             raise TypeError('dest is not one of `str`, `FileInfo`, `DirectoryInfo`')
 
-        with open(self._path, 'rb', buffering=buffering) as source:
+        with self.open_for_read_bytes(buffering=buffering) as source:
             # use x mode to ensure dest does not exists.
-            with open(dest_path, 'xb') as dest_file:
-                for buffer in source:
-                    dest_file.write(buffer)
+            mode = 'wb' if overwrite else 'xb'
+            with open(dest_path, mode) as dest_file:
+                shutil.copyfileobj(source, dest_file)
 
-    def read_text(self, encoding='utf-8') -> str:
-        ''' read all text into memory. '''
-        with self.open_for_read_text(encoding=encoding) as fp:
-            return fp.read()
+    def copy_from(self, src: Union[str, 'FileInfo'], *,
+                  buffering: int = -1, overwrite=False,
+                  lock=False, atomic=False):
+        '''
+        copy content from src.
+        '''
 
-    def read_bytes(self) -> bytes:
-        ''' read all bytes into memory. '''
-        with self.open_for_read_bytes() as fp:
-            return fp.read()
-
-    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int = -1):
-        ''' read all content into stream. '''
-        if not isinstance(stream, io.IOBase):
-            raise TypeError(type(stream))
-        if not stream.writable():
-            raise ValueError('stream is unable to write.')
-
-        if buffering < 0:
-            buffering = io.DEFAULT_BUFFER_SIZE
-
-        if isinstance(stream, io.TextIOBase):
-            encoding = encoding or 'utf-8'
-            fp = self.open_for_read_text(encoding=encoding)
+        if isinstance(src, str):
+            src = FileInfo(src)
+        elif isinstance(src, FileInfo):
+            pass
         else:
-            fp = self.open_for_read_bytes()
+            raise TypeError('src is not one of `str`, `FileInfo`')
 
-        with fp:
-            while True:
-                data = fp.read(buffering)
-                if not data:
-                    break
-                stream.write(data)
+        mode = 'wb' if overwrite else 'xb'
+        with self.open(mode, buffering=buffering, lock=lock, atomic=atomic) as dst_fp:
+            with src.open_for_read_bytes(buffering=buffering) as src_fp:
+                shutil.copyfileobj(src_fp, dst_fp)
 
     def __iadd__(self, other: Union[str, bytes, bytearray, io.IOBase, 'FileInfo']):
         if isinstance(other, str):
@@ -328,7 +366,7 @@ class FileInfo(NodeInfo):
         '''
         return load(self, format=format, kwargs=kwargs)
 
-    def dump(self, obj, format=None, *, kwargs={}):
+    def dump(self, obj, format=None, *, kwargs={}, atomic=True):
         '''
         serialize the `obj` into file.
 
@@ -337,7 +375,7 @@ class FileInfo(NodeInfo):
         '''
         return dump(self, obj, format=format, kwargs=kwargs)
 
-    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}, lock=False) -> Context:
+    def load_context(self, format=None, *, load_kwargs={}, dump_kwargs={}, lock=False, atomic=True) -> Context:
         '''
         load the file in a context, auto dump `context.data` into file when context exit.
 
@@ -354,7 +392,7 @@ class FileInfo(NodeInfo):
             ...
         ```
         '''
-        return load_context(self, format, load_kwargs=load_kwargs, dump_kwargs=dump_kwargs, lock=lock)
+        return load_context(self, format, load_kwargs=load_kwargs, dump_kwargs=dump_kwargs, lock=lock, atomic=atomic)
 
     # hash system
 
@@ -367,11 +405,27 @@ class FileInfo(NodeInfo):
         for example: `get_file_hash('md5', 'sha1')` return `('XXXX1', 'XXXX2')`
         '''
         with self.get_hasher(*algorithms) as hasher:
-            while hasher.read_block():
+            read_block = hasher.read_block
+            while read_block():
                 pass
             return hasher.result
 
     def get_hasher(self, *algorithms: str):
+        '''
+        get the hasher to hash the file.
+        this is helpful if you are writing with progress bar, etc.
+
+        to use this, read the source from `get_file_hash` method:
+
+        ``` py
+        def get_file_hash(self, *algorithms: str):
+            with self.get_hasher(*algorithms) as hasher:
+                while hasher.read_block():
+                    pass
+                return hasher.result
+        ```
+        '''
+
         from .hashs import Hasher
         return Hasher(self._path, algorithms)
 
@@ -466,9 +520,7 @@ class DirectoryInfo(NodeInfo):
             name = str(item.path.name)
             if item.node_type == NodeType.file:
                 if as_stream:
-                    fp = item.open_for_read_bytes()
-                    tree[name] = fp
-                    tree.enter(fp)
+                    tree.set_context(name, item.open_for_read_bytes())
                 else:
                     tree[name] = item.read(mode='rb')
             else:

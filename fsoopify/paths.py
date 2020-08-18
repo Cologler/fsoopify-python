@@ -9,8 +9,6 @@
 import os
 import sys
 
-from .utils import gettercache
-
 NT = sys.platform == 'win32'
 
 if NT:
@@ -26,7 +24,7 @@ if NT:
     def _get_normpath(path: str):
         val = str(path) # avoid recursion
         if val.endswith(':'):
-            val += os.path.sep
+            val += os.path.sep # c: -> c:\
         return os.path.normpath(os.path.normcase(val))
 
     def _join(path, *others):
@@ -50,12 +48,14 @@ else:
 
 class PathComponent(str):
     def __init__(self, *args):
-        self._norm: str = None
+        self._normpath: str = None
 
     def __repr__(self):
         return '{}(\'{}\')'.format(type(self).__name__, self)
 
     def __eq__(self, other):
+        if other is self:
+            return True
         if isinstance(other, PathComponent):
             return self.normalcase == other.normalcase
         if isinstance(other, str):
@@ -66,12 +66,13 @@ class PathComponent(str):
         return hash(self.normalcase)
 
     @property
-    @gettercache
     def normalcase(self):
         '''
         get normcase path which create by `os.path.normcase()`.
         '''
-        return _get_normpath(self)
+        if self._normpath is None:
+            self._normpath = _get_normpath(self)
+        return self._normpath
 
 
 class Name(PathComponent):
@@ -264,7 +265,12 @@ class Path(PathComponent):
         raise NotImplementedError
 
     def get_abspath(self):
-        raise NotImplementedError
+        'get the absolute version of a path'
+        return _AbsPath(os.path.abspath(self))
+
+    def get_relpath(self, rel_to=None):
+        'get the relative version of the path'
+        return _RelPath(os.path.relpath(self, rel_to))
 
 
 class _AbsPath(Path):
@@ -272,7 +278,7 @@ class _AbsPath(Path):
     def _get_parent(self, level: int):
         parts = self.replace('\\', '/').rstrip('/').split('/')
         if len(parts) <= level:
-            raise ValueError(f'for path <{self}>, max level is {len(parts) - 1}')
+            return None
         new_parts = parts[:-level]
         if not NT and new_parts[0] == '':
             new_parts[0] = '/'
@@ -360,5 +366,7 @@ class _RelPath(Path):
     def is_abspath(self):
         return False
 
-    def get_abspath(self):
-        return _AbsPath(os.path.abspath(self))
+    def get_relpath(self, rel_to=None):
+        if rel_to in (None, os.path.curdir):
+            return self
+        return super().get_relpath(rel_to)

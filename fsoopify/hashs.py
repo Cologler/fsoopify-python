@@ -86,10 +86,4 @@ class Hasher:
         if self._result is None:
             raise RuntimeError
         return self._result
-
-
-def hashfile_hexdigest(path: str, algorithms: tuple, *, blocksize=1024 * 64):
-    with Hasher(path, algorithms, blocksize=blocksize) as hc:
-        while hc.read_block():
-            pass
-        return hc.result
+        

@@ -18,5 +18,5 @@ class ContentTree(dict):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._es.__exit__(exc_type, exc_val, exc_tb)
 
-    def enter(self, value):
-        self._es.enter_context(value)
+    def set_context(self, key, value):
+        self[key] = self._es.enter_context(value)

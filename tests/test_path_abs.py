@@ -12,62 +12,63 @@ import pytest
 
 from fsoopify import Path
 
-def only_run_on_win(func):
-    return pytest.mark.skipif(sys.platform != 'win32', reason="only run on windows")(
-        func
-    )
+on_win = pytest.mark.skipif(os.name != 'nt', reason="only run on windows")
+on_unix = pytest.mark.skipif(os.name == 'nt', reason="only run on unix")
 
-def only_run_on_unix(func):
-    return pytest.mark.skipif(sys.platform == 'win32', reason="only run on unix")(
-        func
-    )
+def test_is_abspath():
+    abspath = Path.from_argv()
+    assert abspath.is_abspath()
+    assert abspath == sys.argv[0]
+
+    relpath = Path('abc') # rel path
+    assert relpath.get_abspath().is_abspath()
+    assert relpath.get_abspath() == os.path.abspath('abc')
+
+def test_get_abspath():
+    abspath = Path.from_argv()
+    assert abspath is abspath.get_abspath()
+
+@on_win
+def test_get_relpath_nt():
+    abspath = Path(r'c:\a\x')
+    assert abspath.get_relpath('c:\\a') == 'x'
+    assert abspath.get_relpath('c:\\a\\') == 'x'
+
+@on_win
+def test_is_abspath_on_win():
+    assert Path('c:').is_abspath()
+    assert Path('c:\\').is_abspath()
+    assert Path('c://').is_abspath()
 
 def test_abspath_get_parent():
     path = Path.from_argv(0)
     parent = path.get_parent()
     assert parent == os.path.dirname(sys.argv[0])
 
-def _assert_root_abspath_unable_get_parent(path: Path):
-    assert path.is_abspath()
-
-    # unable to get parent
-    with pytest.raises(ValueError, match='max level is 0'):
-        path.get_parent()
-
-    # dirname is None
-    assert path.dirname is None
-
-@only_run_on_win
+@on_win
 def test_abspath_get_parent_on_win32():
     src_path = os.path.join('c:\\', 'd', 'e')
     path = Path(src_path)
     assert path.get_parent(1) == path.dirname
     assert path.get_parent(1) == os.path.join('c:\\', 'd')
     assert path.get_parent(2) == 'c:\\'
-    with pytest.raises(ValueError, match='max level is 2'):
-        path.get_parent(3)
+    assert path.get_parent(3) is None
+    assert path.get_parent(4) is None
 
-    # test root:
-    _assert_root_abspath_unable_get_parent(Path('C:'))
-    _assert_root_abspath_unable_get_parent(Path('C:\\'))
-
-@only_run_on_unix
+@on_unix
 def test_abspath_get_parent_on_unix():
     src_path = os.path.join('/', 'd', 'e')
     path = Path(src_path)
     assert path.get_parent(1) == path.dirname
     assert path.get_parent(1) == os.path.join('/', 'd')
     assert path.get_parent(2) == '/'
-    with pytest.raises(ValueError, match='max level is 2'):
-        path.get_parent(3)
-
-    # test root:
-    _assert_root_abspath_unable_get_parent(Path('/'))
+    assert path.get_parent(3) is None
+    assert path.get_parent(4) is None
 
 def test_abspath_property():
     pass
 
-@only_run_on_win
+@on_win
 def test_abspath_property_on_win32():
 
     # test root:
@@ -75,7 +76,7 @@ def test_abspath_property_on_win32():
         root_path = Path(root_str)
         assert root_path.name == 'c:'
 
-@only_run_on_unix
+@on_unix
 def test_abspath_propertye_on_unix():
 
     # test root:
