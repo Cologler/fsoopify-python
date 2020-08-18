@@ -23,7 +23,7 @@ from .serialize_ctx import load_context, Context
 from .tree import ContentTree
 from .atomic import open_atomic
 from .utils import copyfileobj, mode_to_flags
-from .openers import FileOpener
+from .openers import FileOpener, OSFileOpener
 
 
 class NodeType(Enum):
@@ -150,62 +150,43 @@ class FileInfo(NodeInfo):
 
     def open(self, mode='r', *,
              buffering=-1, encoding=None, newline=None, closefd=True,
-             lock=False, atomic=False):
+             lock=False, atomic=False, or_create=False):
         '''
         open the file.
 
         - when `lock` set `True`, use `portalocker.lock(LOCK_EX)` to lock the file after it opened.
         - when `atomic` set `True`, read or write as atomic operations.
-        '''
 
-        kwargs = dict(
-            mode=mode,
-            buffering=buffering,
-            encoding=encoding,
-            newline=newline,
-            closefd=closefd,
-            lock=lock,
-        )
+        `or_create` parameter only work if `r` in mode,
+        which mean create file if it does not exists.
+        '''
+        def kwargs():
+            # mode may update so we use kwargs as function.
+            return dict(
+                mode=mode,
+                buffering=buffering,
+                encoding=encoding,
+                newline=newline,
+                closefd=closefd,
+                lock=lock,
+            )
+
+        if or_create and 'r' in mode:
+            if atomic:
+                if '+' not in mode:
+                    mode += '+' # 'r+t' or 'r+b'
+            else:
+                open_flags = mode_to_flags(mode) | os.O_CREAT
+                return OSFileOpener(self._path, flags=open_flags, **kwargs())
 
         if atomic:
             if 'r' in mode and '+' not in mode:
                 # readonly mode, ignore atomic flag and open direct.
                 pass
             else:
-                return open_atomic(self._path, **kwargs)
+                return open_atomic(self._path, **kwargs())
 
-        return FileOpener(self._path, **kwargs)
-
-    def open_or_create(self, mode='r', *, lock=False, atomic=False, **kwargs):
-        '''
-        open or create the file atomic.
-        '''
-
-        if 'a' in mode or 'w' in mode or 'x' in mode:
-            # such mode auto create the file if does not exists,
-            # so we did not need to override it.
-            return self.open(mode, **kwargs)
-
-        # all cases ('rt', 'rb', 'r+t' or 'r+b')
-        if atomic:
-            if '+' not in mode:
-                mode += '+' # 'r+t' or 'r+b'
-            return open_atomic(self._path, mode=mode, lock=lock, **kwargs)
-
-        else:
-            open_flags = mode_to_flags(mode) | os.O_CREAT
-            fd = os.open(self._path, open_flags)
-            fp = None
-            try:
-                fp = os.fdopen(fd, mode, **kwargs)
-                if lock:
-                    portalocker.lock(fp, portalocker.LOCK_EX)
-            except:
-                if fp:
-                    fp.close()
-                os.close(fd)
-                raise
-            return fp
+        return FileOpener(self._path, **kwargs())
 
     def open_for_read_bytes(self, *, buffering=-1):
         ''' open the file with read bytes mode. '''

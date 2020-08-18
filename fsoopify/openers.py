@@ -6,8 +6,11 @@
 # ----------
 
 from abc import ABC, abstractmethod
+import os
 
 import portalocker
+
+from .utils import mode_to_flags
 
 class FileOpenerBase(ABC):
     'the base file opener'
@@ -48,6 +51,37 @@ class FileOpener(FileOpenerBase):
             except:
                 fp.close()
                 raise
+        return fp
+
+
+class OSFileOpener(FileOpenerBase):
+    'the file opener for `os.open`'
+
+    __slots__ = ('_lock', '_openargs', '_flags', '_path')
+
+    def __init__(self, path, *args, flags, **kwargs):
+        super().__init__()
+        self._path = path
+        self._lock = kwargs.pop('lock', False)
+        self._flags = flags
+        self._openargs = (args, kwargs)
+
+    def _get_contextmanager(self):
+        args, kwargs = self._openargs
+        del self._openargs
+        flags = self._flags
+        del self._flags
+        fd = os.open(self._path, flags)
+        fp = None
+        try:
+            fp = os.fdopen(fd, **kwargs)
+            if self._lock:
+                portalocker.lock(fp, portalocker.LOCK_EX)
+        except:
+            if fp:
+                fp.close()
+            #os.close(fd)
+            raise
         return fp
 
 
