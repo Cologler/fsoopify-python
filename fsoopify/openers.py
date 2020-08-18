@@ -10,6 +10,8 @@ from abc import ABC, abstractmethod
 import portalocker
 
 class FileOpenerBase(ABC):
+    'the base file opener'
+
     __slots__ = ('_cm')
 
     @abstractmethod
@@ -27,11 +29,13 @@ class FileOpenerBase(ABC):
 
 
 class FileOpener(FileOpenerBase):
+    'the file opener for builtin `open`'
+
     __slots__ = ('_lock', '_openargs')
 
-    def __init__(self, *args, lock, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__()
-        self._lock = lock
+        self._lock = kwargs.pop('lock', False)
         self._openargs = (args, kwargs)
 
     def _get_contextmanager(self):
@@ -48,6 +52,8 @@ class FileOpener(FileOpenerBase):
 
 
 class ContextManagerFileOpener(FileOpenerBase):
+    'the file opener for any context manager.'
+
     def __init__(self, cm):
         self._cm = cm
 

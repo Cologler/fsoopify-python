@@ -168,10 +168,6 @@ class FileInfo(NodeInfo):
 
         if not atomic:
             return FileOpener(self._path, **kwargs, lock=lock)
-            fp = open(self._path, **kwargs)
-            if lock:
-                portalocker.lock(fp, portalocker.LOCK_EX)
-            return fp
         else:
             return open_atomic(self._path, **kwargs)
 
