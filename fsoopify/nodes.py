@@ -22,7 +22,7 @@ from .serialize import load, dump
 from .serialize_ctx import load_context, Context
 from .tree import ContentTree
 from .atomic import open_atomic
-from .utils import copyfileobj, mode_to_flags
+from .utils import copyfileobj
 from .openers import FileOpener, FileOpenerBase
 
 
