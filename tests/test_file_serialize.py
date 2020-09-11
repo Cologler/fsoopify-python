@@ -13,9 +13,6 @@ from pytest import raises
 
 from fsoopify import DirectoryInfo, FormatNotFoundError, FileInfo
 
-test_data_dir = DirectoryInfo('test_data_dir')
-test_data_dir.ensure_created()
-
 example_data_1 = {
     'a': 1,
     'b': '2',
