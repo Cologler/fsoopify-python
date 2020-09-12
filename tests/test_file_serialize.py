@@ -91,10 +91,3 @@ def test_load_context_with_error(data, lock, atomic):
 
         with file_info.load_context(lock=lock, atomic=atomic) as s:
             assert s.data == data # still not changes
-
-def test_load_pipfile():
-    import pipfile
-    from fsoopify.serialize import NotSupportError
-    assert FileInfo('Pipfile').load() == pipfile.load('Pipfile').data
-    with raises(NotSupportError):
-        FileInfo('Pipfile').dump({})
