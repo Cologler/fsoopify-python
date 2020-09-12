@@ -5,6 +5,8 @@
 #
 # ----------
 
+from typing import *
+import io
 from abc import ABC, abstractmethod
 import os
 
@@ -21,14 +23,15 @@ class FileOpenerBase(ABC):
     def _get_contextmanager(self):
         raise NotImplementedError
 
-    def __enter__(self):
+    def __enter__(self) -> Union[io.TextIOWrapper, io.BufferedRandom, io.BufferedReader, io.BufferedWriter]:
         self._cm = self._get_contextmanager()
         return self._cm.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        rv = self._cm.__exit__(exc_type, exc_val, exc_tb)
-        del self._cm
-        return rv
+        if hasattr(self, '_cm'):
+            rv = self._cm.__exit__(exc_type, exc_val, exc_tb)
+            del self._cm
+            return rv
 
 
 class FileOpener(FileOpenerBase):

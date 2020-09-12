@@ -13,9 +13,6 @@ from pytest import raises
 
 from fsoopify import DirectoryInfo, FormatNotFoundError, FileInfo
 
-test_data_dir = DirectoryInfo('test_data_dir')
-test_data_dir.ensure_created()
-
 example_data_1 = {
     'a': 1,
     'b': '2',
@@ -57,6 +54,7 @@ def test_load_context(data, lock: bool, atomic: bool):
         assert not file_info.is_exists()
         with file_info.load_context(lock=lock, atomic=atomic) as s:
             assert s.data is None
+            assert not file_info.is_exists()
             s.data = data
         assert file_info.is_exists()
 
@@ -93,10 +91,3 @@ def test_load_context_with_error(data, lock, atomic):
 
         with file_info.load_context(lock=lock, atomic=atomic) as s:
             assert s.data == data # still not changes
-
-def test_load_pipfile():
-    import pipfile
-    from fsoopify.serialize import NotSupportError
-    assert FileInfo('Pipfile').load() == pipfile.load('Pipfile').data
-    with raises(NotSupportError):
-        FileInfo('Pipfile').dump({})

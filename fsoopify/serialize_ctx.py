@@ -8,19 +8,14 @@
 import sys
 from contextlib import contextmanager, suppress
 
-import portalocker
 import filelock
 
 from .serialize import *
 
-
-@contextmanager
-def lock_with_portalocker(fp):
-    'use `portalocker.lock` as context manager.'
-    import portalocker
-    portalocker.lock(fp, portalocker.LOCK_EX)
-    yield
-
+def exit_ctxmgr(cm) -> None:
+    'exit a context manager if it is not `None`, return `None`.'
+    if cm is not None:
+        cm.__exit__(*sys.exc_info())
 
 class Context:
     data = None
@@ -36,8 +31,8 @@ class Context:
         self._atomic = atomic
         # states:
         self._lock_cm = None
-        self._fp_cm = None
-        self._fp = None
+        self._writer_cm = None
+        self._writer = None
 
     def __enter__(self):
         def _read_data_from(fp):
@@ -45,63 +40,69 @@ class Context:
                 'origin_kwargs': self._load_kwargs
             })
 
-        is_exists = self._file_info.is_file()
-        # we did not want to copy data from src on atomic mode
-        mode = 'wb' if self._atomic else 'r+b'
+        if self._lock:
+            self._lock_cm = filelock.FileLock(self._file_info.path + '.lock')
+            self._lock_cm.__enter__()
 
+        reader_cm = None
         try:
-            if self._lock and self._atomic:
-                self._lock_cm = filelock.FileLock(self._file_info.path + '.lock')
-                self._lock_cm.__enter__()
+            reader_cm = self._file_info.open('r+b')
+            try:
+                reader = reader_cm.__enter__()
+            except FileNotFoundError:
+                reader_cm = exit_ctxmgr(reader_cm)
+            else:
+                _read_data_from(reader)
 
-            self._fp_cm = self._file_info.open(mode, atomic=self._atomic, or_create=True)
-            self._fp = self._fp_cm.__enter__()
-
-            if self._lock and not self._atomic:
-                self._lock_cm = lock_with_portalocker(self._fp)
-                self._lock_cm.__enter__()
-
-            if is_exists:
-                if self._atomic:
-                    with self._file_info.open_for_read_bytes() as fp:
-                        _read_data_from(fp)
+                if not self._atomic:
+                    self._writer_cm = reader_cm
+                    self._writer = reader
                 else:
-                    self._fp.seek(0)
-                    _read_data_from(self._fp)
-
+                    reader_cm = exit_ctxmgr(reader_cm)
         except:
             self._cleanup()
             raise
 
         return self
 
+    def _open_for_write(self):
+        if self._writer is None:
+            assert self._writer_cm is None
+            try:
+                self._writer_cm = self._file_info.open('w+b', atomic=self._atomic)
+                self._writer = self._writer_cm.__enter__()
+            except:
+                self._writer = exit_ctxmgr(self._writer)
+                self._writer_cm = exit_ctxmgr(self._writer_cm)
+                raise
+        else: # opened for read
+            self._writer.seek(0)
+        return self._writer
+
+    def _cleanup_cm(self, cm) -> None:
+        if cm is not None:
+            cm.__exit__(*sys.exc_info())
+        return None
+
     def _cleanup(self):
-        if self._lock_cm is not None:
-            self._lock_cm.__exit__(*sys.exc_info())
-            self._lock_cm = None
-
-        if self._fp is not None:
-            assert self._fp_cm is not None
-            self._fp = None
-
-        if self._fp_cm is not None:
-            self._fp_cm.__exit__(*sys.exc_info())
-            self._fp_cm = None
+        self._writer_cm = exit_ctxmgr(self._writer_cm)
+        self._writer = None
+        self._lock_cm = exit_ctxmgr(self._lock_cm)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         remove_file = False
         try:
             # only save if no exceptions:
-            if exc_val is None and self.save_on_exit and self._fp:
-                self._fp.seek(0)
+            if exc_val is None and self.save_on_exit:
+                fp = self._open_for_write()
                 if self.data is None:
                     remove_file = True
                 else:
                     buf = self._serializer.dumpb(self.data, options={
                         'origin_kwargs': self._dump_kwargs
                     })
-                    self._fp.write(buf)
-                self._fp.truncate()
+                    fp.write(buf)
+                fp.truncate()
         finally:
             self._cleanup()
 

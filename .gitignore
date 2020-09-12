@@ -103,6 +103,5 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-test_data_dir
 .pytest_cache
 .vscode/settings.json

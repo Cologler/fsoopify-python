@@ -22,7 +22,7 @@ from .serialize import load, dump
 from .serialize_ctx import load_context, Context
 from .tree import ContentTree
 from .atomic import open_atomic
-from .utils import copyfileobj, mode_to_flags
+from .utils import copyfileobj
 from .openers import FileOpener, FileOpenerBase
 
 
@@ -43,6 +43,9 @@ class NodeInfo(ABC):
 
     def __repr__(self):
         return '{}(\'{}\')'.format(type(self).__name__, self._path)
+
+    def __fspath__(self):
+        return str(self._path)
 
     @property
     def path(self) -> Path:
