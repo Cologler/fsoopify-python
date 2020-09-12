@@ -8,6 +8,7 @@
 from typing import *
 import binascii
 import hashlib
+import os
 
 ALGORITHMS = set(hashlib.algorithms_available)
 ALGORITHMS.add('crc32')
@@ -73,12 +74,13 @@ class Hasher:
     @property
     def total_size(self):
         if self._total_size is None:
-            import os
             self._total_size = os.path.getsize(self._path)
         return self._total_size
 
     @property
     def progress(self):
+        if self.total_size == 0:
+            return 1.
         return self._total_read / self.total_size
 
     @property
@@ -86,4 +88,3 @@ class Hasher:
         if self._result is None:
             raise RuntimeError
         return self._result
-        
