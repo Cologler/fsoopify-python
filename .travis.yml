@@ -6,7 +6,7 @@ python:
   - "3.7"
   - "3.8"
 install:
-  - pipenv install --dev --skip-lock
+  - poetry install --dev
 script:
   - python -m pytest
 deploy:
