@@ -31,7 +31,7 @@ class NodeType(Enum):
     dir = 2
 
 
-class NodeInfo(os.PathLike):
+class NodeInfo(ABC):
     ''' the abstract base class for file system node. '''
 
     def __init__(self, path):
