@@ -9,6 +9,7 @@ import sys
 from contextlib import contextmanager, suppress
 
 import filelock
+import anyser
 
 from .serialize import *
 
@@ -21,10 +22,10 @@ class Context:
     data = None
     save_on_exit = True
 
-    def __init__(self, file_info, *, serializer, load_kwargs: dict, dump_kwargs: dict, lock: bool, atomic: bool):
+    def __init__(self, file_info, *, format, load_kwargs: dict, dump_kwargs: dict, lock: bool, atomic: bool):
         super().__init__()
         self._file_info = file_info
-        self._serializer = serializer
+        self._format = format
         self._load_kwargs = load_kwargs
         self._dump_kwargs = dump_kwargs
         self._lock = lock
@@ -36,9 +37,7 @@ class Context:
 
     def __enter__(self):
         def _read_data_from(fp):
-            self.data = self._serializer.loadf(fp, options={
-                'origin_kwargs': self._load_kwargs
-            })
+            self.data = anyser.loadf(fp, self._format, origin_kwargs=self._load_kwargs)
 
         if self._lock:
             self._lock_cm = filelock.FileLock(self._file_info.path + '.lock')
@@ -98,9 +97,7 @@ class Context:
                 if self.data is None:
                     remove_file = True
                 else:
-                    buf = self._serializer.dumpb(self.data, options={
-                        'origin_kwargs': self._dump_kwargs
-                    })
+                    buf = anyser.dumpb(self.data, self._format, origin_kwargs=self._dump_kwargs)
                     fp.write(buf)
                 fp.truncate()
         finally:
@@ -111,10 +108,9 @@ class Context:
 
 
 def load_context(f, format: str=None, *, load_kwargs: dict, dump_kwargs: dict, lock: bool, atomic: bool):
-    serializer = get_serializer(f, format)
-
+    format = resolve_format(f, format)
     ctx = Context(f,
-        serializer=serializer,
+        format=format,
         load_kwargs=load_kwargs, dump_kwargs=dump_kwargs,
         lock=lock,
         atomic=atomic,

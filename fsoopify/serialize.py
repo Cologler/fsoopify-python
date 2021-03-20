@@ -9,45 +9,35 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import anyser
-import anyser.core
+from anyser import FormatNotFoundError, NotSupportError, SerializeError
 from anyser.abc import ISerializer
-from anyser.core import register_format
-from anyser.err import FormatNotFoundError, SerializeError, NotSupportError
 
-def load(file_info, format=None, *, kwargs={}):
-    serializer = get_serializer(file_info, format)
-    with file_info.open('rb') as fp:
-        return serializer.loadf(fp, options={
-            'origin_kwargs': kwargs.copy()
-        })
-
-def dump(file_info, obj, format=None, *, kwargs={}, atomic=False):
-    serializer = get_serializer(file_info, format)
-    data = serializer.dumpb(obj, options={
-        'origin_kwargs': kwargs.copy()
-    })
-    file_info.write_bytes(data, append=False, atomic=atomic)
-
-def get_serializer(file_info, format: Optional[str]):
-    if not isinstance(format, (str, type(None))):
-        raise TypeError(f'format must be str.')
-
+def resolve_format(file_info, format: Optional[str]) -> str:
+    available_formats = set(anyser.get_available_formats())
     if format is None:
         ext = file_info.path.name.ext.lower()
-        serializer = anyser.core.find_serializer(file_info.path.name.ext.lower())
-        if serializer is None:
-            serializer = anyser.core.find_serializer(file_info.path.name.lower())
-        if serializer is None:
-            raise FormatNotFoundError(f'Cannot detect format from file {file_info!r}')
-
+        if ext in available_formats:
+            return ext
+        name = file_info.path.name.lower()
+        if name in available_formats:
+            return name
+        raise FormatNotFoundError(f'Cannot detect format from file {file_info!r}')
     else:
-        serializer = anyser.core.find_serializer(format)
-        if serializer is None:
-            raise FormatNotFoundError(f'unknown format: {format}')
+        if format in available_formats:
+            return format
+        raise FormatNotFoundError(f'unknown format: {format}')
 
-    return serializer
+def load(file_info, format=None, *, kwargs={}):
+    format = resolve_format(file_info, format)
+    with file_info.open('rb') as fp:
+        return anyser.loadf(fp, format, origin_kwargs=kwargs)
 
-@register_format('pipfile')
+def dump(file_info, obj, format=None, *, kwargs={}, atomic=False):
+    format = resolve_format(file_info, format)
+    data = anyser.dumpb(obj, format, origin_kwargs=kwargs)
+    file_info.write_bytes(data, append=False, atomic=atomic)
+
+@anyser.register_format('pipfile')
 class PipfileSerializer(ISerializer):
     format_name = 'pipfile'
 
