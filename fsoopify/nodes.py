@@ -277,15 +277,6 @@ class FileInfo(NodeInfo):
             with open(dest_path, mode) as dest_file:
                 shutil.copyfileobj(source, dest_file)
 
-    def copy_to_path(self, path, *, buffering: int=None, overwrite=False):
-        '''
-        copy the file to dest path.
-        '''
-        mode = 'wb' if overwrite else 'xb'
-        with self.open_for_read_bytes(buffering=buffering) as src:
-            with open(path, mode) as dst:
-                copyfileobj(src, dst, buffering)
-
     def copy_to_stream(self, stream: io.IOBase, *, encoding=None, buffering: int=None):
         '''
         read content of the file into stream.
