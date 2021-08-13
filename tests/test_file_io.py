@@ -205,15 +205,15 @@ def test_read_into_stream():
         src.write_bytes(b'd1s5afajjmogjfwiughweuihgw')
 
         dest = io.BytesIO()
-        src.read_into_stream(dest)
+        src.copy_to_stream(dest)
         assert dest.getvalue() == b'd1s5afajjmogjfwiughweuihgw'
 
         dest = io.BytesIO()
-        src.read_into_stream(dest, buffering=6)
+        src.copy_to_stream(dest, buffering=6)
         assert dest.getvalue() == b'd1s5afajjmogjfwiughweuihgw'
 
         dest = io.StringIO()
-        src.read_into_stream(dest)
+        src.copy_to_stream(dest)
         assert dest.getvalue() == 'd1s5afajjmogjfwiughweuihgw'
 
 def test_write_text():

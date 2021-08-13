@@ -255,21 +255,6 @@ class FileInfo(NodeInfo):
         with self.open_for_read_bytes() as fp:
             return fp.read()
 
-    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int=None):
-        ''' read all content into stream. '''
-        if not isinstance(stream, io.IOBase):
-            raise TypeError(type(stream))
-        if not stream.writable():
-            raise ValueError('stream is unable to write.')
-
-        if isinstance(stream, io.TextIOBase):
-            fp = self.open_for_read_text(encoding=encoding)
-        else:
-            fp = self.open_for_read_bytes(buffering=buffering)
-
-        with fp as fsrc:
-            shutil.copyfileobj(fsrc, stream)
-
     def copy_to(self, dest: Union[str, 'FileInfo', 'DirectoryInfo'], *,
                 buffering: int=None, overwrite=False):
         '''
@@ -293,10 +278,30 @@ class FileInfo(NodeInfo):
                 shutil.copyfileobj(source, dest_file)
 
     def copy_to_path(self, path, *, buffering: int=None, overwrite=False):
+        '''
+        copy the file to dest path.
+        '''
         mode = 'wb' if overwrite else 'xb'
         with self.open_for_read_bytes(buffering=buffering) as src:
             with open(path, mode) as dst:
                 copyfileobj(src, dst, buffering)
+
+    def copy_to_stream(self, stream: io.IOBase, *, encoding=None, buffering: int=None):
+        '''
+        read content of the file into stream.
+        '''
+        if not isinstance(stream, io.IOBase):
+            raise TypeError(type(stream))
+        if not stream.writable():
+            raise ValueError('stream is unable to write.')
+
+        if isinstance(stream, io.TextIOBase):
+            fp = self.open_for_read_text(encoding=encoding)
+        else:
+            fp = self.open_for_read_bytes(buffering=buffering)
+
+        with fp as fsrc:
+            copyfileobj(fsrc, stream, buffering)
 
     def copy_from(self, src: Union[str, 'FileInfo'], *,
                   buffering: int=None, overwrite=False,

@@ -70,7 +70,7 @@ You can use `fsoopify.FileInfo(...)` to create a `FileInfo` object and use file 
 - `read()`
 - `read_text()`
 - `read_bytes()`
-- `read_into_stream()`
+- `copy_to_stream()`
 
 And you can use `+=` for append data:
 
