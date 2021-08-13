@@ -204,51 +204,10 @@ class FileInfo(NodeInfo):
         ''' get file size. '''
         return Size(os.path.getsize(self.path))
 
-    def write(self, data, *, mode=None, buffering: int=None, encoding=None, newline=None, atomic=False):
-        '''
-        write data into the file.
-        '''
-        if mode is None:
-            if isinstance(data, (str, io.TextIOBase)):
-                mode = 'w'
-            elif isinstance(data, (bytes, bytearray, io.BufferedIOBase)):
-                mode = 'wb'
-            else:
-                raise TypeError(type(data))
-
-        with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline, atomic=atomic) as fp:
-            if isinstance(data, io.IOBase):
-                return copyfileobj(data, fp)
-            else:
-                return fp.write(data)
-
     def read(self, mode='r', *, buffering: int=None, encoding=None, newline=None):
         ''' read all content from the file. '''
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
-
-    def write_text(self, text: str, *, encoding: str=None, append: bool=_DEFAULT_APPEND, atomic=False):
-        ''' write text into the file. '''
-        assert isinstance(text, str), type(text)
-        data = text.encode(encoding or DEFAULT_ENCODING)
-        self.write_bytes(data, append=append, atomic=atomic)
-
-    def write_bytes(self, data: Union[bytes, bytearray], *, append: bool=_DEFAULT_APPEND, atomic: bool=False):
-        ''' write bytes into the file. '''
-        assert isinstance(data, (bytes, bytearray)), type(data)
-        mode = 'ab' if append else 'wb'
-        with self.open(mode=mode, atomic=atomic) as fp:
-            fp.write(data)
-
-    def write_from_stream(self, stream: io.IOBase, *, append=True, atomic=False):
-        if not isinstance(stream, io.IOBase):
-            raise TypeError(type(stream))
-        if not stream.readable():
-            raise ValueError('stream is unable to read.')
-        mode = 'a' if append else 'w'
-        if not isinstance(stream, io.TextIOBase):
-            mode += 'b'
-        return self.write(stream, mode=mode, atomic=atomic)
 
     def read_text(self, encoding: str=None) -> str:
         ''' read all text into memory. '''
@@ -259,6 +218,61 @@ class FileInfo(NodeInfo):
         ''' read all bytes into memory. '''
         with self.open_for_read_bytes() as fp:
             return fp.read()
+
+    def write(self, data: Union[str, bytes, bytearray], *,
+              append: bool=_DEFAULT_APPEND, atomic=False):
+        '''
+        write data into the file.
+        '''
+        if isinstance(data, str):
+            self.write_text(data, append=append, atomic=atomic)
+        elif isinstance(data, (bytes, bytearray)):
+            self.write_bytes(data, append=append, atomic=atomic)
+        else:
+            raise TypeError(type(data))
+
+    def write_text(self, text: str, *, encoding: str=None, append: bool=_DEFAULT_APPEND, atomic=False):
+        ''' write text into the file. '''
+
+        if not isinstance(text, str):
+            raise TypeError(type(text))
+
+        data = text.encode(encoding or DEFAULT_ENCODING)
+        self.write_bytes(data, append=append, atomic=atomic)
+
+    def write_bytes(self, data: Union[bytes, bytearray], *, append: bool=_DEFAULT_APPEND, atomic: bool=False):
+        ''' write bytes into the file. '''
+
+        if not isinstance(data, (bytes, bytearray)):
+            raise TypeError(type(data))
+
+        mode = 'ab' if append else 'wb'
+        with self.open(mode=mode, atomic=atomic) as fp:
+            fp.write(data)
+
+    def write_from(self, source, *, append: bool=_DEFAULT_APPEND, atomic=False):
+        if isinstance(source, io.IOBase):
+            self.write_from_stream(source, append=append, atomic=atomic)
+        else:
+            raise TypeError(type(source))
+
+    def write_from_stream(self, stream: io.IOBase, *,
+            encoding: str=None, append: bool=_DEFAULT_APPEND, atomic=False):
+        ''' write data from a stream into the file. '''
+
+        if not isinstance(stream, io.IOBase):
+            raise TypeError(type(stream))
+        if not stream.readable():
+            raise ValueError('stream is unable to read.')
+
+        mode = 'a' if append else 'w'
+        if not isinstance(stream, io.TextIOBase):
+            if encoding is not None:
+                raise ValueError('binary stream with encoding')
+            mode += 'b'
+
+        with self.open(mode=mode, encoding=encoding, atomic=atomic) as fp:
+            copyfileobj(stream, fp)
 
     def copy_to(self, dest: Union[str, 'FileInfo', 'DirectoryInfo'], *,
                 buffering: int=None, overwrite=False):
@@ -303,7 +317,7 @@ class FileInfo(NodeInfo):
                   buffering: int=None, overwrite=False,
                   lock=False, atomic=False):
         '''
-        copy content from src.
+        copy content from file.
         '''
 
         if isinstance(src, str):
@@ -316,7 +330,7 @@ class FileInfo(NodeInfo):
         mode = 'wb' if overwrite else 'xb'
         with self.open(mode, buffering=buffering, lock=lock, atomic=atomic) as dst_fp:
             with src.open_for_read_bytes(buffering=buffering) as src_fp:
-                shutil.copyfileobj(src_fp, dst_fp)
+                copyfileobj(src_fp, dst_fp)
 
     def __iadd__(self, other: Union[str, bytes, bytearray, io.IOBase, 'FileInfo']):
         if isinstance(other, str):
