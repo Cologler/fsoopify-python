@@ -7,6 +7,8 @@
 
 from enum import IntEnum
 
+DEFAULT_ENCODING = 'utf-8'
+
 class NodeType(IntEnum):
     file = 1
     dir = 2

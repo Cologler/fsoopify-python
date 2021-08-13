@@ -21,7 +21,7 @@ class COWAtomicWriter(atomicwrites.AtomicWriter):
     'copy on write atomic writer'
 
     def get_fileobject(self, final_mode, lock, **kwargs):
-        with super().get_fileobject(**kwargs) as tmp_fp:
+        with super().get_fileobject('wb') as tmp_fp:
             name = tmp_fp.name
             if os.path.isfile(self._path):
                 with contextlib.suppress(FileNotFoundError):

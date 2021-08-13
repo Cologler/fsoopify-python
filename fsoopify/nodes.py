@@ -13,7 +13,7 @@ from abc import abstractmethod, ABC
 import io
 import shutil
 
-from .consts import NodeType
+from .consts import NodeType, DEFAULT_ENCODING
 from .paths import Path
 from .size import Size
 from .serialize import load, dump
@@ -148,15 +148,18 @@ class FileInfo(NodeInfo):
              buffering=-1, encoding=None, newline=None, closefd=True,
              lock=False, atomic=False, or_create=False) -> FileOpenerBase:
         '''
-        open the file,
-        return a `FileOpener` as context manager.
+        open the file, return a `FileOpener` as context manager.
 
+        - the default encoding is `utf-8` for text mode.
         - when `lock` is `True`, use `portalocker.lock(LOCK_EX)` to lock the file after opened.
         - when `atomic` is `True`, make write file as atomic operations.
         - when `or_create` is `True`, create file if it does not exists,
           to prevent raises `FileNotFoundError` with `r+` mode.
         '''
         opener=None
+
+        if 'b' not in mode and encoding is None:
+            encoding = DEFAULT_ENCODING
 
         def kwargs():
             # mode may update so we use kwargs as function.
@@ -187,7 +190,7 @@ class FileInfo(NodeInfo):
         ''' open the file with read bytes mode. '''
         return self.open('rb', buffering=buffering)
 
-    def open_for_read_text(self, *, encoding='utf-8'):
+    def open_for_read_text(self, *, encoding: str=None):
         ''' open the file with read text mode. '''
         return self.open('r', encoding=encoding)
 
@@ -219,7 +222,7 @@ class FileInfo(NodeInfo):
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
 
-    def write_text(self, text: str, *, encoding='utf-8', append=True, atomic=False):
+    def write_text(self, text: str, *, encoding: str=None, append=True, atomic=False):
         ''' write text into the file. '''
         mode = 'a' if append else 'w'
         return self.write(text, mode=mode, encoding=encoding, atomic=atomic)
@@ -239,7 +242,7 @@ class FileInfo(NodeInfo):
             mode += 'b'
         return self.write(stream, mode=mode, atomic=atomic)
 
-    def read_text(self, encoding='utf-8') -> str:
+    def read_text(self, encoding: str=None) -> str:
         ''' read all text into memory. '''
         with self.open_for_read_text(encoding=encoding) as fp:
             return fp.read()
@@ -249,8 +252,7 @@ class FileInfo(NodeInfo):
         with self.open_for_read_bytes() as fp:
             return fp.read()
 
-    def read_into_stream(self, stream: io.IOBase, *,
-                         encoding=None, buffering: int = -1):
+    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int = -1):
         ''' read all content into stream. '''
         if not isinstance(stream, io.IOBase):
             raise TypeError(type(stream))
@@ -258,7 +260,7 @@ class FileInfo(NodeInfo):
             raise ValueError('stream is unable to write.')
 
         if isinstance(stream, io.TextIOBase):
-            fp = self.open_for_read_text(encoding=encoding or 'utf-8')
+            fp = self.open_for_read_text(encoding=encoding)
         else:
             fp = self.open_for_read_bytes(buffering=buffering)
 
