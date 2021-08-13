@@ -23,6 +23,8 @@ from .atomic import open_atomic
 from .utils import copyfileobj
 from .openers import FileOpener, FileOpenerBase
 
+_DEFAULT_APPEND = True
+
 
 class NodeInfo(ABC):
     ''' the abstract base class for file system node. '''
@@ -225,15 +227,18 @@ class FileInfo(NodeInfo):
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
 
-    def write_text(self, text: str, *, encoding: str=None, append=True, atomic=False):
+    def write_text(self, text: str, *, encoding: str=None, append: bool=_DEFAULT_APPEND, atomic=False):
         ''' write text into the file. '''
-        mode = 'a' if append else 'w'
-        return self.write(text, mode=mode, encoding=encoding, atomic=atomic)
+        assert isinstance(text, str), type(text)
+        data = text.encode(encoding or DEFAULT_ENCODING)
+        self.write_bytes(data, append=append, atomic=atomic)
 
-    def write_bytes(self, data: Union[bytes, bytearray], *, append=True, atomic=False):
+    def write_bytes(self, data: Union[bytes, bytearray], *, append: bool=_DEFAULT_APPEND, atomic: bool=False):
         ''' write bytes into the file. '''
+        assert isinstance(data, (bytes, bytearray)), type(data)
         mode = 'ab' if append else 'wb'
-        return self.write(data, mode=mode, atomic=atomic)
+        with self.open(mode=mode, atomic=atomic) as fp:
+            fp.write(data)
 
     def write_from_stream(self, stream: io.IOBase, *, append=True, atomic=False):
         if not isinstance(stream, io.IOBase):

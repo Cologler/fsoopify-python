@@ -221,6 +221,8 @@ def test_write_text():
         fi = DirectoryInfo(tmpdir).get_fileinfo('tmp.txt')
         fi.write_text('dsajuidhsa')
         assert fi.read_text() == 'dsajuidhsa'
+        fi.write_text('你好')
+        assert fi.read_text() == 'dsajuidhsa你好'
 
 def test_write_bytes():
     with tempfile.TemporaryDirectory() as tmpdir:
