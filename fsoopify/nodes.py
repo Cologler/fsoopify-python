@@ -145,7 +145,7 @@ class NodeInfo(ABC):
 class FileInfo(NodeInfo):
 
     def open(self, mode='r', *,
-             buffering=-1, encoding=None, newline=None, closefd=True,
+             buffering: int=None, encoding=None, newline=None, closefd=True,
              lock=False, atomic=False, or_create=False) -> FileOpenerBase:
         '''
         open the file, return a `FileOpener` as context manager.
@@ -157,6 +157,9 @@ class FileInfo(NodeInfo):
           to prevent raises `FileNotFoundError` with `r+` mode.
         '''
         opener=None
+
+        if buffering is None:
+            buffering = -1 # the default open buffering is -1
 
         if 'b' not in mode and encoding is None:
             encoding = DEFAULT_ENCODING
@@ -186,7 +189,7 @@ class FileInfo(NodeInfo):
 
         return FileOpener(self._path, **kwargs())
 
-    def open_for_read_bytes(self, *, buffering=-1):
+    def open_for_read_bytes(self, *, buffering: int=None):
         ''' open the file with read bytes mode. '''
         return self.open('rb', buffering=buffering)
 
@@ -199,7 +202,7 @@ class FileInfo(NodeInfo):
         ''' get file size. '''
         return Size(os.path.getsize(self.path))
 
-    def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None, atomic=False):
+    def write(self, data, *, mode=None, buffering: int=None, encoding=None, newline=None, atomic=False):
         '''
         write data into the file.
         '''
@@ -217,7 +220,7 @@ class FileInfo(NodeInfo):
             else:
                 return fp.write(data)
 
-    def read(self, mode='r', *, buffering=-1, encoding=None, newline=None):
+    def read(self, mode='r', *, buffering: int=None, encoding=None, newline=None):
         ''' read all content from the file. '''
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline) as fp:
             return fp.read()
@@ -252,7 +255,7 @@ class FileInfo(NodeInfo):
         with self.open_for_read_bytes() as fp:
             return fp.read()
 
-    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int = -1):
+    def read_into_stream(self, stream: io.IOBase, *, encoding=None, buffering: int=None):
         ''' read all content into stream. '''
         if not isinstance(stream, io.IOBase):
             raise TypeError(type(stream))
@@ -268,7 +271,7 @@ class FileInfo(NodeInfo):
             shutil.copyfileobj(fsrc, stream)
 
     def copy_to(self, dest: Union[str, 'FileInfo', 'DirectoryInfo'], *,
-                buffering: int = -1, overwrite=False):
+                buffering: int=None, overwrite=False):
         '''
         copy the file to dest location.
 
@@ -289,8 +292,14 @@ class FileInfo(NodeInfo):
             with open(dest_path, mode) as dest_file:
                 shutil.copyfileobj(source, dest_file)
 
+    def copy_to_path(self, path, *, buffering: int=None, overwrite=False):
+        mode = 'wb' if overwrite else 'xb'
+        with self.open_for_read_bytes(buffering=buffering) as src:
+            with open(path, mode) as dst:
+                copyfileobj(src, dst, buffering)
+
     def copy_from(self, src: Union[str, 'FileInfo'], *,
-                  buffering: int = -1, overwrite=False,
+                  buffering: int=None, overwrite=False,
                   lock=False, atomic=False):
         '''
         copy content from src.
