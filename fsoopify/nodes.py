@@ -21,7 +21,7 @@ from .paths import Path
 from .size import Size
 from .serialize import load, dump
 from .serialize_ctx import load_context, Context
-from .tree import ContentTree
+from .tree import ContentTree, BuildTreeVisitor
 from .atomic import open_atomic
 from .utils import copyfileobj
 from .openers import FileOpener, FileOpenerBase
@@ -511,20 +511,12 @@ class DirectoryInfo(NodeInfo):
         Get structure tree from current directory.
 
         if `as_stream` is `True`,
-        collect all files as `file-object` instead of read entire file into memory,
+        collect sub files as `file-object` instead of read entire file into memory,
         you need to call `__exit__` after you used it.
         '''
-        tree = ContentTree()
-        for item in self.list_items():
-            name = str(item.path.name)
-            if item.node_type == NodeType.file:
-                if as_stream:
-                    tree.set_context(name, item.open_for_read_bytes())
-                else:
-                    tree[name] = item.read(mode='rb')
-            else:
-                tree.set_context(name, item.get_tree(as_stream=as_stream))
-        return tree
+        visitor = BuildTreeVisitor(as_stream=as_stream)
+        tree: dict = visitor.visit(self)
+        return tree[tuple(tree)[0]]
 
     def make_tree(self, tree: dict, mode: int=0):
         '''
