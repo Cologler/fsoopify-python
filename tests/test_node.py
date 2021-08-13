@@ -15,8 +15,12 @@ from fsoopify import NodeInfo, FileInfo, DirectoryInfo
 # create by static methods:
 
 def test_node_from_path():
-    assert isinstance(NodeInfo.from_path(sys.argv[0]), FileInfo)
-    assert isinstance(NodeInfo.from_path(os.path.dirname(sys.argv[0])), DirectoryInfo)
+    argv_0 = sys.argv[0]
+    if os.path.isfile(argv_0):
+        assert isinstance(NodeInfo.from_path(argv_0), FileInfo)
+    else:
+        assert NodeInfo.from_path(argv_0) is None
+    assert isinstance(NodeInfo.from_path(os.path.dirname(argv_0)), DirectoryInfo)
 
 def test_node_from_cwd():
     dir_info = NodeInfo.from_cwd()
