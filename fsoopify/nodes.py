@@ -207,13 +207,13 @@ class FileInfo(NodeInfo):
                 raise TypeError(type(data))
 
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline, atomic=atomic) as fp:
-            if isinstance(data, (str, bytes, bytearray)):
-                return fp.write(data)
-            else:
+            if isinstance(data, io.IOBase):
                 read_buffering = buffering
                 if read_buffering < 2:
                     read_buffering = io.DEFAULT_BUFFER_SIZE
                 return copyfileobj(data, fp)
+            else:
+                return fp.write(data)
 
     def read(self, mode='r', *, buffering=-1, encoding=None, newline=None):
         ''' read all content from the file. '''
