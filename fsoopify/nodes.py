@@ -23,8 +23,6 @@ from .atomic import open_atomic
 from .utils import copyfileobj
 from .openers import FileOpener, FileOpenerBase
 
-_DEFAULT_APPEND = True
-
 
 class NodeInfo(ABC):
     ''' the abstract base class for file system node. '''
@@ -220,7 +218,7 @@ class FileInfo(NodeInfo):
             return fp.read()
 
     def write(self, data: Union[str, bytes, bytearray], *,
-              append: bool=_DEFAULT_APPEND, atomic=False):
+              append: bool=True, atomic=False):
         '''
         write data into the file.
         '''
@@ -231,7 +229,7 @@ class FileInfo(NodeInfo):
         else:
             raise TypeError(type(data))
 
-    def write_text(self, text: str, *, encoding: str=None, append: bool=_DEFAULT_APPEND, atomic=False):
+    def write_text(self, text: str, *, encoding: str=None, append: bool=True, atomic=False):
         ''' write text into the file. '''
 
         if not isinstance(text, str):
@@ -240,7 +238,7 @@ class FileInfo(NodeInfo):
         data = text.encode(encoding or DEFAULT_ENCODING)
         self.write_bytes(data, append=append, atomic=atomic)
 
-    def write_bytes(self, data: Union[bytes, bytearray], *, append: bool=_DEFAULT_APPEND, atomic: bool=False):
+    def write_bytes(self, data: Union[bytes, bytearray], *, append: bool=True, atomic: bool=False):
         ''' write bytes into the file. '''
 
         if not isinstance(data, (bytes, bytearray)):
@@ -250,14 +248,14 @@ class FileInfo(NodeInfo):
         with self.open(mode=mode, atomic=atomic) as fp:
             fp.write(data)
 
-    def write_from(self, source, *, append: bool=_DEFAULT_APPEND, atomic=False):
+    def write_from(self, source, *, append: bool=True, atomic=False):
         if isinstance(source, io.IOBase):
             self.write_from_stream(source, append=append, atomic=atomic)
         else:
             raise TypeError(type(source))
 
     def write_from_stream(self, stream: io.IOBase, *,
-            encoding: str=None, append: bool=_DEFAULT_APPEND, atomic=False):
+            encoding: str=None, append: bool=True, atomic=False):
         ''' write data from a stream into the file. '''
 
         if not isinstance(stream, io.IOBase):
