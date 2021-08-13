@@ -315,14 +315,14 @@ class FileInfo(NodeInfo):
 
     def __iadd__(self, other: Union[str, bytes, bytearray, io.IOBase, 'FileInfo']):
         if isinstance(other, str):
-            self.write_text(other)
+            self.write_text(other, append=True)
         elif isinstance(other, (bytes, bytearray)):
-            self.write_bytes(other)
+            self.write_bytes(other, append=True)
         elif isinstance(other, io.IOBase):
-            self.write_from_stream(other)
+            self.write_from_stream(other, append=True)
         elif isinstance(other, FileInfo):
             with other.open_for_read_bytes() as fp:
-                self.write_from_stream(fp)
+                self.write_from_stream(fp, append=True)
         else:
             raise TypeError(type(other))
         return self
