@@ -6,14 +6,10 @@
 #
 # ----------
 
+from .consts import NodeType
 from .paths import Path
-from .nodes import (
-    NodeType,
-    NodeInfo, DirectoryInfo, FileInfo,
-)
-from .serialize import (
-    FormatNotFoundError, SerializeError
-)
+from .nodes import NodeInfo, DirectoryInfo, FileInfo
+from .serialize import FormatNotFoundError, SerializeError
 
 __all__ = [
     'Path',

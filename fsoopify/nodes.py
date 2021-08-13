@@ -16,6 +16,7 @@ import shutil
 
 import portalocker
 
+from .consts import NodeType
 from .paths import Path
 from .size import Size
 from .serialize import load, dump
@@ -24,11 +25,6 @@ from .tree import ContentTree
 from .atomic import open_atomic
 from .utils import copyfileobj
 from .openers import FileOpener, FileOpenerBase
-
-
-class NodeType(Enum):
-    file = 1
-    dir = 2
 
 
 class NodeInfo(ABC):
