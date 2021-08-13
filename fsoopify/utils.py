@@ -13,6 +13,8 @@ COPY_BUFSIZE = getattr(shutil, 'COPY_BUFSIZE', 1024 * 1024)
 
 def copyfileobj(fsrc, fdst, length=COPY_BUFSIZE) -> int:
     """like `shutil.copyfileobj`, but return the length of total readed."""
+    if length is None or length < 1:
+        length = COPY_BUFSIZE
     # Localize variable access to minimize overhead.
     fsrc_read = fsrc.read
     fdst_write = fdst.write
