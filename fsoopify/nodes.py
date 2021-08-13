@@ -151,9 +151,9 @@ class FileInfo(NodeInfo):
         open the file,
         return a `FileOpener` as context manager.
 
-        - when `lock` set `True`, use `portalocker.lock(LOCK_EX)` to lock the file after it opened.
-        - when `atomic` set `True`, read or write as atomic operations.
-        - when `or_create` set `True`, create file if it does not exists,
+        - when `lock` is `True`, use `portalocker.lock(LOCK_EX)` to lock the file after opened.
+        - when `atomic` is `True`, make write file as atomic operations.
+        - when `or_create` is `True`, create file if it does not exists,
           to prevent raises `FileNotFoundError` with `r+` mode.
         '''
         opener=None
@@ -197,7 +197,9 @@ class FileInfo(NodeInfo):
         return Size(os.path.getsize(self.path))
 
     def write(self, data, *, mode=None, buffering=-1, encoding=None, newline=None, atomic=False):
-        ''' write data into the file. '''
+        '''
+        write data into the file.
+        '''
         if mode is None:
             if isinstance(data, (str, io.TextIOBase)):
                 mode = 'w'
@@ -208,9 +210,6 @@ class FileInfo(NodeInfo):
 
         with self.open(mode=mode, buffering=buffering, encoding=encoding, newline=newline, atomic=atomic) as fp:
             if isinstance(data, io.IOBase):
-                read_buffering = buffering
-                if read_buffering < 2:
-                    read_buffering = io.DEFAULT_BUFFER_SIZE
                 return copyfileobj(data, fp)
             else:
                 return fp.write(data)
