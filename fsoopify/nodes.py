@@ -6,15 +6,12 @@
 #
 # ----------
 
+from typing import *
 import sys
 import os
-from typing import Iterable, List, Any, Union
 from abc import abstractmethod, ABC
-from enum import Enum
 import io
 import shutil
-
-import portalocker
 
 from .consts import NodeType
 from .paths import Path
