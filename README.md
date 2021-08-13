@@ -6,6 +6,8 @@
 
 Just make file system oopify.
 
+* The default encoding is UTF-8 for all text mode API.
+
 ## install
 
 ``` cmd
