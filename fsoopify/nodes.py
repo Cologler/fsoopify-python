@@ -523,7 +523,7 @@ class DirectoryInfo(NodeInfo):
                 else:
                     tree[name] = item.read(mode='rb')
             else:
-                tree[name] = item.get_tree()
+                tree[name] = item.get_tree(as_stream=as_stream)
         return tree
 
     def make_tree(self, tree: dict, mode: int=0):
