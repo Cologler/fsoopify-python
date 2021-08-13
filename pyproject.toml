@@ -6,7 +6,7 @@ authors = ["Cologler <skyoflw@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 anyser = "^0.1.1"
 portalocker = "^2.0.0"
 atomicwrites = "^1.4.0"
