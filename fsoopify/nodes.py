@@ -272,6 +272,8 @@ class FileInfo(NodeInfo):
         with self.open(mode=mode, encoding=encoding, atomic=atomic) as fp:
             copyfileobj(stream, fp)
 
+    # unlike the read API, the copy_to API has no return value.
+
     def copy_to(self, dest: Union[str, 'FileInfo', 'DirectoryInfo'], *,
                 buffering: int=None, overwrite=False):
         '''
@@ -303,13 +305,14 @@ class FileInfo(NodeInfo):
         if not stream.writable():
             raise ValueError('stream is unable to write.')
 
-        if isinstance(stream, io.TextIOBase):
-            fp = self.open_for_read_text(encoding=encoding)
-        else:
-            fp = self.open_for_read_bytes(buffering=buffering)
+        mode = 'r'
+        if not isinstance(stream, io.TextIOBase):
+            if encoding is not None:
+                raise ValueError('binary stream with encoding')
+            mode += 'b'
 
-        with fp as fsrc:
-            copyfileobj(fsrc, stream, buffering)
+        with self.open(mode=mode, encoding=encoding, buffering=buffering) as fp:
+            copyfileobj(fp, stream, buffering)
 
     def copy_from(self, src: Union[str, 'FileInfo'], *,
                   buffering: int=None, overwrite=False,
